@@ -383,8 +383,9 @@ button:active { transform: scale(0.97); }
   position: absolute;
   top: 8px;
   right: 8px;
+  z-index: 3;
   background: rgba(21, 13, 20, 0.75);
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
   color: #fff;
   width: 26px;
   height: 26px;
@@ -392,12 +393,12 @@ button:active { transform: scale(0.97); }
   padding: 0;
   line-height: 1;
   font-size: 0.85rem;
-  opacity: 0;
+  opacity: 0.85;
   transition: opacity 0.15s, background 0.15s;
 }
 
-.movie-card:hover .remove-btn { opacity: 1; }
-.movie-card .remove-btn:hover { background: var(--pink-deep); border-color: var(--pink); }
+.movie-card .remove-btn:hover,
+.movie-card .remove-btn:focus-visible { opacity: 1; background: var(--pink-deep); border-color: var(--pink); }
 
 .movie-card .card-stars {
   color: var(--pink-soft);
@@ -434,9 +435,10 @@ button:active { transform: scale(0.97); }
   flex-shrink: 0;
 }
 
-.watched-avatar {
+.movie-card .watched-avatar {
   width: 20px;
   height: 20px;
+  aspect-ratio: 1 / 1;
   border-radius: 50%;
   object-fit: cover;
   border: 1.5px solid var(--bg-alt);
