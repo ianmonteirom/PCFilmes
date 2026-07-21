@@ -704,6 +704,107 @@ button:active { transform: scale(0.97); }
 
 .auth-switch button:hover { border-color: transparent; text-decoration: underline; }
 
+/* ---------- Profile tab ---------- */
+.profile-logged-out {
+  text-align: center;
+  padding: 70px 20px;
+}
+
+.profile-logged-out p { color: var(--muted); margin-bottom: 20px; font-size: 1.02rem; }
+
+.profile-card {
+  max-width: 380px;
+  margin: 0 auto;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+}
+
+.profile-photo-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.profile-photo {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--card-hover);
+  border: 2px solid var(--pink);
+  box-shadow: 0 0 0 4px var(--pink-glow);
+}
+
+.profile-field-label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 4px 0 6px;
+}
+
+#profileNameInput {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 11px 13px;
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+#profileNameInput:focus {
+  outline: none;
+  border-color: var(--pink);
+  box-shadow: 0 0 0 3px var(--pink-glow);
+}
+
+.profile-stats {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin: 22px 0 18px;
+}
+
+.profile-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.profile-stat-number {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--pink-soft);
+}
+
+.profile-stat-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.logout-link {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.85rem;
+  padding: 6px;
+}
+
+.logout-link:hover { color: #ff8080; border-color: transparent; }
+
 .stars {
   display: flex;
   justify-content: center;

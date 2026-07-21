@@ -115,6 +115,7 @@ const usersCol = collection(db, "users");
         btn.classList.add("active");
         document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
         if (btn.dataset.tab === "roleta") resetRouletteView();
+        if (btn.dataset.tab === "perfil") renderProfileTab();
       });
     });
   }
@@ -357,6 +358,98 @@ const usersCol = collection(db, "users");
     return true;
   }
 
+  // ---------- Profile tab ----------
+  let pendingProfilePhotoDataUrl = "";
+
+  function initProfileTab() {
+    const loginBtn = document.getElementById("profileLoginBtn");
+    const photoFile = document.getElementById("profilePhotoFile");
+    const photoPreview = document.getElementById("profilePhotoPreview");
+    const saveBtn = document.getElementById("profileSaveBtn");
+    const logoutBtn = document.getElementById("profileLogoutBtn");
+    const errorEl = document.getElementById("profileError");
+    const savedHint = document.getElementById("profileSavedHint");
+
+    loginBtn.addEventListener("click", () => openAuthModal());
+
+    photoFile.addEventListener("change", async () => {
+      const file = photoFile.files && photoFile.files[0];
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        errorEl.textContent = "Escolha um arquivo de imagem.";
+        errorEl.classList.remove("hidden");
+        return;
+      }
+      try {
+        pendingProfilePhotoDataUrl = await resizeImageToDataUrl(file, 160, 0.7);
+        photoPreview.src = pendingProfilePhotoDataUrl;
+        errorEl.classList.add("hidden");
+      } catch (err) {
+        console.error(err);
+        errorEl.textContent = "Não foi possível processar essa imagem.";
+        errorEl.classList.remove("hidden");
+      }
+    });
+
+    saveBtn.addEventListener("click", async () => {
+      if (!currentUser) return;
+      errorEl.classList.add("hidden");
+      savedHint.classList.add("hidden");
+      const name = document.getElementById("profileNameInput").value.trim() || "Anônimo";
+      const photoURL = pendingProfilePhotoDataUrl || myPhotoURL() || avatarUrl(name, "");
+      try {
+        await updateProfile(auth.currentUser, {
+          displayName: name,
+          photoURL: avatarUrl(name, ""), // perfil do Auth só aceita URLs curtas
+        });
+        await setDoc(doc(db, "users", currentUser.uid), { displayName: name, photoURL }, { merge: true });
+        pendingProfilePhotoDataUrl = "";
+        savedHint.classList.remove("hidden");
+        showToast("Perfil atualizado!");
+      } catch (err) {
+        console.error(err);
+        errorEl.textContent = "Não foi possível salvar. Tente de novo.";
+        errorEl.classList.remove("hidden");
+      }
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+      showToast("Você saiu da conta.");
+    });
+  }
+
+  function renderProfileTab() {
+    const loggedOut = document.getElementById("profileLoggedOut");
+    const loggedIn = document.getElementById("profileLoggedIn");
+    if (!loggedOut || !loggedIn) return;
+
+    if (!currentUser) {
+      loggedOut.classList.remove("hidden");
+      loggedIn.classList.add("hidden");
+      return;
+    }
+    loggedOut.classList.add("hidden");
+    loggedIn.classList.remove("hidden");
+
+    if (!pendingProfilePhotoDataUrl) {
+      document.getElementById("profilePhotoPreview").src = avatarUrl(myDisplayName(), myPhotoURL());
+    }
+    const nameInput = document.getElementById("profileNameInput");
+    if (document.activeElement !== nameInput) {
+      nameInput.value = myDisplayName();
+    }
+
+    const watchedMovies = state.movies.filter((m) => iHaveWatched(m));
+    const ratings = watchedMovies
+      .map((m) => m.watchedBy[currentUser.uid].rating)
+      .filter((r) => r != null);
+    const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
+
+    document.getElementById("profileStatWatched").textContent = watchedMovies.length;
+    document.getElementById("profileStatAvg").textContent = avg != null ? avg.toFixed(1) : "—";
+  }
+
   // ---------- Search & Add ----------
   function initAddForm() {
     const form = document.getElementById("addForm");
@@ -594,6 +687,7 @@ const usersCol = collection(db, "users");
     renderWatched();
     renderHeroStats();
     updateRouletteAvailability();
+    renderProfileTab();
   }
 
   function updateRouletteAvailability() {
@@ -757,6 +851,7 @@ const usersCol = collection(db, "users");
   document.addEventListener("DOMContentLoaded", () => {
     initTabs();
     initAuth();
+    initProfileTab();
     initAddForm();
     initRoulette();
     initRatingModal();

@@ -39,6 +39,7 @@
   <button class="tab-btn active" data-tab="lista">Minha Lista</button>
   <button class="tab-btn" data-tab="roleta">🎲 Roleta</button>
   <button class="tab-btn" data-tab="assistidos">Assistidos</button>
+  <button class="tab-btn" data-tab="perfil">👤 Perfil</button>
 </nav>
 
 <main>
@@ -85,6 +86,42 @@
     <h2 class="section-title">Assistidos <span id="assistidosCount" class="count-badge">0</span></h2>
     <div id="watchedGrid" class="movie-grid"></div>
     <p id="assistidosEmpty" class="empty-msg hidden">Você ainda não marcou nenhum filme como assistido.</p>
+  </section>
+
+  <!-- ABA: PERFIL -->
+  <section id="tab-perfil" class="tab-content">
+    <div id="profileLoggedOut" class="profile-logged-out">
+      <p>Entre na sua conta para personalizar seu perfil.</p>
+      <button id="profileLoginBtn" class="primary-btn">Entrar</button>
+    </div>
+
+    <div id="profileLoggedIn" class="profile-card hidden">
+      <div class="profile-photo-row">
+        <img id="profilePhotoPreview" class="profile-photo" src="" alt="">
+        <label for="profilePhotoFile" class="photo-picker-label">Trocar foto</label>
+        <input type="file" id="profilePhotoFile" accept="image/*" class="hidden">
+      </div>
+
+      <label class="profile-field-label" for="profileNameInput">Nome</label>
+      <input type="text" id="profileNameInput" placeholder="Seu nome">
+
+      <p id="profileError" class="auth-error hidden"></p>
+      <button id="profileSaveBtn" class="primary-btn full-width">Salvar alterações</button>
+      <p id="profileSavedHint" class="hint hidden">Perfil atualizado!</p>
+
+      <div class="profile-stats">
+        <div class="profile-stat">
+          <span id="profileStatWatched" class="profile-stat-number">0</span>
+          <span class="profile-stat-label">assistidos</span>
+        </div>
+        <div class="profile-stat">
+          <span id="profileStatAvg" class="profile-stat-number">—</span>
+          <span class="profile-stat-label">nota média</span>
+        </div>
+      </div>
+
+      <button id="profileLogoutBtn" class="logout-link">Sair da conta</button>
+    </div>
   </section>
 
 </main>
