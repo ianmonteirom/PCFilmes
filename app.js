@@ -115,7 +115,6 @@ const usersCol = collection(db, "users");
         btn.classList.add("active");
         document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
         if (btn.dataset.tab === "roleta") resetRouletteView();
-        if (btn.dataset.tab === "perfil") renderProfileTab();
       });
     });
   }
@@ -151,7 +150,6 @@ const usersCol = collection(db, "users");
 
   function initAuth() {
     const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
     const authModal = document.getElementById("authModal");
     const closeAuthBtn = document.getElementById("closeAuthBtn");
     const googleLoginBtn = document.getElementById("googleLoginBtn");
@@ -189,11 +187,6 @@ const usersCol = collection(db, "users");
     closeAuthBtn.addEventListener("click", closeAuthModal);
     authModal.addEventListener("click", (e) => {
       if (e.target === authModal) closeAuthModal();
-    });
-
-    logoutBtn.addEventListener("click", async () => {
-      await signOut(auth);
-      showToast("Você saiu da conta.");
     });
 
     googleLoginBtn.addEventListener("click", async () => {
@@ -346,6 +339,7 @@ const usersCol = collection(db, "users");
     } else {
       loginBtn.classList.remove("hidden");
       userChip.classList.add("hidden");
+      closeProfileModal();
     }
   }
 
@@ -358,11 +352,13 @@ const usersCol = collection(db, "users");
     return true;
   }
 
-  // ---------- Profile tab ----------
+  // ---------- Profile modal ----------
   let pendingProfilePhotoDataUrl = "";
 
-  function initProfileTab() {
-    const loginBtn = document.getElementById("profileLoginBtn");
+  function initProfileModal() {
+    const userChip = document.getElementById("userChip");
+    const modal = document.getElementById("profileModal");
+    const closeBtn = document.getElementById("closeProfileBtn");
     const photoFile = document.getElementById("profilePhotoFile");
     const photoPreview = document.getElementById("profilePhotoPreview");
     const saveBtn = document.getElementById("profileSaveBtn");
@@ -370,7 +366,11 @@ const usersCol = collection(db, "users");
     const errorEl = document.getElementById("profileError");
     const savedHint = document.getElementById("profileSavedHint");
 
-    loginBtn.addEventListener("click", () => openAuthModal());
+    userChip.addEventListener("click", () => openProfileModal());
+    closeBtn.addEventListener("click", closeProfileModal);
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeProfileModal();
+    });
 
     photoFile.addEventListener("change", async () => {
       const file = photoFile.files && photoFile.files[0];
@@ -416,38 +416,31 @@ const usersCol = collection(db, "users");
     logoutBtn.addEventListener("click", async () => {
       await signOut(auth);
       showToast("Você saiu da conta.");
+      closeProfileModal();
     });
   }
 
-  function renderProfileTab() {
-    const loggedOut = document.getElementById("profileLoggedOut");
-    const loggedIn = document.getElementById("profileLoggedIn");
-    if (!loggedOut || !loggedIn) return;
-
-    if (!currentUser) {
-      loggedOut.classList.remove("hidden");
-      loggedIn.classList.add("hidden");
-      return;
-    }
-    loggedOut.classList.add("hidden");
-    loggedIn.classList.remove("hidden");
-
-    if (!pendingProfilePhotoDataUrl) {
-      document.getElementById("profilePhotoPreview").src = avatarUrl(myDisplayName(), myPhotoURL());
-    }
-    const nameInput = document.getElementById("profileNameInput");
-    if (document.activeElement !== nameInput) {
-      nameInput.value = myDisplayName();
-    }
+  function openProfileModal() {
+    if (!currentUser) return;
+    pendingProfilePhotoDataUrl = "";
+    document.getElementById("profileError").classList.add("hidden");
+    document.getElementById("profileSavedHint").classList.add("hidden");
+    document.getElementById("profilePhotoPreview").src = avatarUrl(myDisplayName(), myPhotoURL());
+    document.getElementById("profileNameInput").value = myDisplayName();
 
     const watchedMovies = state.movies.filter((m) => iHaveWatched(m));
     const ratings = watchedMovies
       .map((m) => m.watchedBy[currentUser.uid].rating)
       .filter((r) => r != null);
     const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
-
     document.getElementById("profileStatWatched").textContent = watchedMovies.length;
     document.getElementById("profileStatAvg").textContent = avg != null ? avg.toFixed(1) : "—";
+
+    document.getElementById("profileModal").classList.remove("hidden");
+  }
+
+  function closeProfileModal() {
+    document.getElementById("profileModal").classList.add("hidden");
   }
 
   // ---------- Search & Add ----------
@@ -687,7 +680,6 @@ const usersCol = collection(db, "users");
     renderWatched();
     renderHeroStats();
     updateRouletteAvailability();
-    renderProfileTab();
   }
 
   function updateRouletteAvailability() {
@@ -851,7 +843,7 @@ const usersCol = collection(db, "users");
   document.addEventListener("DOMContentLoaded", () => {
     initTabs();
     initAuth();
-    initProfileTab();
+    initProfileModal();
     initAddForm();
     initRoulette();
     initRatingModal();

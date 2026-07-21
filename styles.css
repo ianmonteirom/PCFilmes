@@ -72,7 +72,16 @@ body {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 4px 6px 4px 4px;
+  padding: 4px 14px 4px 4px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: border-color 0.15s, transform 0.1s;
+}
+
+.user-chip:hover {
+  border-color: var(--pink);
+  color: var(--text);
+  transform: translateY(-1px);
 }
 
 .user-avatar {
@@ -93,10 +102,6 @@ body {
   white-space: nowrap;
 }
 
-.user-chip .icon-btn {
-  font-size: 1.05rem;
-  padding: 2px;
-}
 
 .hero-logo {
   flex-shrink: 0;
@@ -704,23 +709,13 @@ button:active { transform: scale(0.97); }
 
 .auth-switch button:hover { border-color: transparent; text-decoration: underline; }
 
-/* ---------- Profile tab ---------- */
-.profile-logged-out {
-  text-align: center;
-  padding: 70px 20px;
+/* ---------- Profile modal ---------- */
+.profile-box {
+  max-width: 340px;
+  text-align: left;
 }
 
-.profile-logged-out p { color: var(--muted); margin-bottom: 20px; font-size: 1.02rem; }
-
-.profile-card {
-  max-width: 380px;
-  margin: 0 auto;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 28px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-}
+.profile-box h3 { text-align: center; margin-bottom: 18px; }
 
 .profile-photo-row {
   display: flex;

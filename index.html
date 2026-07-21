@@ -26,11 +26,10 @@
     </div>
     <div id="authArea" class="auth-area">
       <button id="loginBtn" class="primary-btn small">Entrar</button>
-      <div id="userChip" class="user-chip hidden">
+      <button id="userChip" class="user-chip hidden" title="Editar perfil">
         <img id="userAvatar" class="user-avatar" src="" alt="">
         <span id="userName" class="user-name"></span>
-        <button id="logoutBtn" class="icon-btn" title="Sair">⎋</button>
-      </div>
+      </button>
     </div>
   </div>
 </header>
@@ -39,7 +38,6 @@
   <button class="tab-btn active" data-tab="lista">Minha Lista</button>
   <button class="tab-btn" data-tab="roleta">🎲 Roleta</button>
   <button class="tab-btn" data-tab="assistidos">Assistidos</button>
-  <button class="tab-btn" data-tab="perfil">👤 Perfil</button>
 </nav>
 
 <main>
@@ -88,41 +86,6 @@
     <p id="assistidosEmpty" class="empty-msg hidden">Você ainda não marcou nenhum filme como assistido.</p>
   </section>
 
-  <!-- ABA: PERFIL -->
-  <section id="tab-perfil" class="tab-content">
-    <div id="profileLoggedOut" class="profile-logged-out">
-      <p>Entre na sua conta para personalizar seu perfil.</p>
-      <button id="profileLoginBtn" class="primary-btn">Entrar</button>
-    </div>
-
-    <div id="profileLoggedIn" class="profile-card hidden">
-      <div class="profile-photo-row">
-        <img id="profilePhotoPreview" class="profile-photo" src="" alt="">
-        <label for="profilePhotoFile" class="photo-picker-label">Trocar foto</label>
-        <input type="file" id="profilePhotoFile" accept="image/*" class="hidden">
-      </div>
-
-      <label class="profile-field-label" for="profileNameInput">Nome</label>
-      <input type="text" id="profileNameInput" placeholder="Seu nome">
-
-      <p id="profileError" class="auth-error hidden"></p>
-      <button id="profileSaveBtn" class="primary-btn full-width">Salvar alterações</button>
-      <p id="profileSavedHint" class="hint hidden">Perfil atualizado!</p>
-
-      <div class="profile-stats">
-        <div class="profile-stat">
-          <span id="profileStatWatched" class="profile-stat-number">0</span>
-          <span class="profile-stat-label">assistidos</span>
-        </div>
-        <div class="profile-stat">
-          <span id="profileStatAvg" class="profile-stat-number">—</span>
-          <span class="profile-stat-label">nota média</span>
-        </div>
-      </div>
-
-      <button id="profileLogoutBtn" class="logout-link">Sair da conta</button>
-    </div>
-  </section>
 
 </main>
 
@@ -165,6 +128,40 @@
       <span id="authSwitchText">Ainda não tem conta?</span>
       <button id="authSwitchBtn" type="button">Criar conta</button>
     </p>
+  </div>
+</div>
+
+<!-- MODAL: PERFIL -->
+<div id="profileModal" class="modal hidden">
+  <div class="modal-box profile-box">
+    <button id="closeProfileBtn" class="modal-close" title="Fechar">✕</button>
+    <h3>Seu perfil</h3>
+
+    <div class="profile-photo-row">
+      <img id="profilePhotoPreview" class="profile-photo" src="" alt="">
+      <label for="profilePhotoFile" class="photo-picker-label">Trocar foto</label>
+      <input type="file" id="profilePhotoFile" accept="image/*" class="hidden">
+    </div>
+
+    <label class="profile-field-label" for="profileNameInput">Nome</label>
+    <input type="text" id="profileNameInput" placeholder="Seu nome">
+
+    <p id="profileError" class="auth-error hidden"></p>
+    <button id="profileSaveBtn" class="primary-btn full-width">Salvar alterações</button>
+    <p id="profileSavedHint" class="hint hidden">Perfil atualizado!</p>
+
+    <div class="profile-stats">
+      <div class="profile-stat">
+        <span id="profileStatWatched" class="profile-stat-number">0</span>
+        <span class="profile-stat-label">assistidos</span>
+      </div>
+      <div class="profile-stat">
+        <span id="profileStatAvg" class="profile-stat-number">—</span>
+        <span class="profile-stat-label">nota média</span>
+      </div>
+    </div>
+
+    <button id="profileLogoutBtn" class="logout-link">Sair da conta</button>
   </div>
 </div>
 
