@@ -110,7 +110,13 @@
     <form id="authForm" autocomplete="on">
       <div id="signupFields" class="hidden">
         <input type="text" id="authName" placeholder="Seu nome">
-        <input type="text" id="authPhoto" placeholder="URL da foto de perfil (opcional)">
+        <div class="photo-picker">
+          <img id="authPhotoPreview" class="photo-preview" src="" alt="">
+          <label for="authPhotoFile" class="photo-picker-label">
+            <span id="authPhotoFileLabel">Escolher foto de perfil</span>
+          </label>
+          <input type="file" id="authPhotoFile" accept="image/*" class="hidden">
+        </div>
       </div>
       <input type="email" id="authEmail" placeholder="E-mail" required autocomplete="email">
       <input type="password" id="authPassword" placeholder="Senha" required autocomplete="current-password">

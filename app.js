@@ -108,6 +108,32 @@ const moviesCol = collection(db, "movies");
   // ---------- Auth ----------
   let authMode = "login"; // "login" | "signup"
 
+  let pendingAvatarDataUrl = "";
+
+  function resizeImageToDataUrl(file, size, quality) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Falha ao ler a imagem."));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error("Arquivo de imagem inválido."));
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext("2d");
+          const scale = Math.max(size / img.width, size / img.height);
+          const w = img.width * scale;
+          const h = img.height * scale;
+          ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   function initAuth() {
     const loginBtn = document.getElementById("loginBtn");
     const logoutBtn = document.getElementById("logoutBtn");
@@ -117,6 +143,32 @@ const moviesCol = collection(db, "movies");
     const authForm = document.getElementById("authForm");
     const authSwitchBtn = document.getElementById("authSwitchBtn");
     const authError = document.getElementById("authError");
+    const authPhotoFile = document.getElementById("authPhotoFile");
+    const authPhotoPreview = document.getElementById("authPhotoPreview");
+    const authPhotoFileLabel = document.getElementById("authPhotoFileLabel");
+
+    authPhotoFile.addEventListener("change", async () => {
+      const file = authPhotoFile.files && authPhotoFile.files[0];
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        showAuthErrorGlobal("Escolha um arquivo de imagem.");
+        return;
+      }
+      try {
+        pendingAvatarDataUrl = await resizeImageToDataUrl(file, 128, 0.7);
+        authPhotoPreview.src = pendingAvatarDataUrl;
+        authPhotoPreview.classList.add("has-image");
+        authPhotoFileLabel.textContent = "Trocar foto";
+      } catch (err) {
+        console.error(err);
+        showAuthErrorGlobal("Não foi possível processar essa imagem.");
+      }
+    });
+
+    function showAuthErrorGlobal(msg) {
+      authError.textContent = msg;
+      authError.classList.remove("hidden");
+    }
 
     loginBtn.addEventListener("click", () => openAuthModal());
     closeAuthBtn.addEventListener("click", closeAuthModal);
@@ -153,11 +205,10 @@ const moviesCol = collection(db, "movies");
       try {
         if (authMode === "signup") {
           const name = document.getElementById("authName").value.trim() || "Anônimo";
-          const photo = document.getElementById("authPhoto").value.trim();
           const cred = await createUserWithEmailAndPassword(auth, email, password);
           await updateProfile(cred.user, {
             displayName: name,
-            photoURL: photo || avatarUrl(name, ""),
+            photoURL: pendingAvatarDataUrl || avatarUrl(name, ""),
           });
         } else {
           await signInWithEmailAndPassword(auth, email, password);
@@ -226,6 +277,10 @@ const moviesCol = collection(db, "movies");
   function openAuthModal() {
     setAuthMode("login");
     document.getElementById("authForm").reset();
+    pendingAvatarDataUrl = "";
+    document.getElementById("authPhotoPreview").src = "";
+    document.getElementById("authPhotoPreview").classList.remove("has-image");
+    document.getElementById("authPhotoFileLabel").textContent = "Escolher foto de perfil";
     document.getElementById("authModal").classList.remove("hidden");
   }
 

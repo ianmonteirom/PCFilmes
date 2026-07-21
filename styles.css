@@ -645,6 +645,40 @@ button:active { transform: scale(0.97); }
   gap: 10px;
 }
 
+.photo-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+}
+
+.photo-preview {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--card-hover);
+  border: 1px solid var(--pink-glow);
+  flex-shrink: 0;
+  visibility: hidden;
+}
+
+.photo-preview.has-image {
+  visibility: visible;
+}
+
+.photo-picker-label {
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--pink-soft);
+  font-weight: 500;
+}
+
+.photo-picker-label:hover { text-decoration: underline; }
+
 .full-width { width: 100%; }
 
 .auth-error {
