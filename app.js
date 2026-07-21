@@ -4,6 +4,7 @@ import {
   collection,
   addDoc,
   doc,
+  setDoc,
   updateDoc,
   deleteDoc,
   onSnapshot,
@@ -36,6 +37,7 @@ const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 const auth = getAuth(firebaseApp);
 const moviesCol = collection(db, "movies");
+const usersCol = collection(db, "users");
 
 (() => {
   "use strict";
@@ -49,6 +51,8 @@ const moviesCol = collection(db, "movies");
   /** @type {{movies: Array}} */
   let state = { movies: [] };
   let currentUser = null;
+  let currentProfile = null; // { displayName, photoURL } loaded from Firestore (users/{uid})
+  let unsubscribeProfile = null;
 
   // ---------- Utilities ----------
   function escapeHtml(str) {
@@ -90,6 +94,16 @@ const moviesCol = collection(db, "movies");
 
   function iHaveWatched(movie) {
     return !!(currentUser && movie.watchedBy && movie.watchedBy[currentUser.uid]);
+  }
+
+  function myDisplayName() {
+    if (!currentUser) return "";
+    return (currentProfile && currentProfile.displayName) || currentUser.displayName || currentUser.email || "Anônimo";
+  }
+
+  function myPhotoURL() {
+    if (!currentUser) return "";
+    return (currentProfile && currentProfile.photoURL) || currentUser.photoURL || "";
   }
 
   // ---------- Tabs ----------
@@ -205,10 +219,17 @@ const moviesCol = collection(db, "movies");
       try {
         if (authMode === "signup") {
           const name = document.getElementById("authName").value.trim() || "Anônimo";
+          // O perfil do Firebase Auth só aceita URLs curtas, então a foto de verdade
+          // (que pode ser uma imagem grande em base64) fica guardada no Firestore.
+          const fallbackAvatar = avatarUrl(name, "");
           const cred = await createUserWithEmailAndPassword(auth, email, password);
           await updateProfile(cred.user, {
             displayName: name,
-            photoURL: pendingAvatarDataUrl || avatarUrl(name, ""),
+            photoURL: fallbackAvatar,
+          });
+          await setDoc(doc(db, "users", cred.user.uid), {
+            displayName: name,
+            photoURL: pendingAvatarDataUrl || fallbackAvatar,
           });
         } else {
           await signInWithEmailAndPassword(auth, email, password);
@@ -227,6 +248,31 @@ const moviesCol = collection(db, "movies");
 
     onAuthStateChanged(auth, (user) => {
       currentUser = user;
+      if (unsubscribeProfile) {
+        unsubscribeProfile();
+        unsubscribeProfile = null;
+      }
+      if (user) {
+        // Mantém o perfil (nome/foto) do Firestore sincronizado em tempo real.
+        unsubscribeProfile = onSnapshot(doc(db, "users", user.uid), (snap) => {
+          currentProfile = snap.exists() ? snap.data() : null;
+          updateAuthUI();
+          renderAll();
+        });
+        // Login pelo Google: espelha nome/foto da conta Google no perfil do Firestore.
+        // (Login por e-mail/senha já grava seu próprio perfil no fluxo de cadastro,
+        // então não sobrescrevemos aqui para não perder a foto enviada manualmente.)
+        const isGoogleUser = (user.providerData || []).some((p) => p.providerId === "google.com");
+        if (isGoogleUser) {
+          setDoc(
+            doc(db, "users", user.uid),
+            { displayName: user.displayName || "Anônimo", photoURL: user.photoURL || "" },
+            { merge: true }
+          ).catch((err) => console.error("Falha ao sincronizar perfil:", err));
+        }
+      } else {
+        currentProfile = null;
+      }
       updateAuthUI();
       renderAll();
     });
@@ -294,8 +340,8 @@ const moviesCol = collection(db, "movies");
     if (currentUser) {
       loginBtn.classList.add("hidden");
       userChip.classList.remove("hidden");
-      document.getElementById("userAvatar").src = avatarUrl(currentUser.displayName, currentUser.photoURL);
-      document.getElementById("userName").textContent = currentUser.displayName || currentUser.email || "Usuário";
+      document.getElementById("userAvatar").src = avatarUrl(myDisplayName(), myPhotoURL());
+      document.getElementById("userName").textContent = myDisplayName() || "Usuário";
     } else {
       loginBtn.classList.remove("hidden");
       userChip.classList.add("hidden");
@@ -673,8 +719,8 @@ const moviesCol = collection(db, "movies");
       try {
         await updateDoc(doc(db, "movies", movieId), {
           [`watchedBy.${uid}`]: {
-            displayName: currentUser.displayName || currentUser.email || "Anônimo",
-            photoURL: currentUser.photoURL || "",
+            displayName: myDisplayName(),
+            photoURL: myPhotoURL(),
             rating,
             watchedAt,
           },
