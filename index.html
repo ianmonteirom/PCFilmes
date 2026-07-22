@@ -35,16 +35,17 @@
 </header>
 
 <nav class="tabs">
-  <button class="tab-btn active" data-tab="lista">Minha Lista</button>
+  <button class="tab-btn active" data-tab="lista">Filmes</button>
   <button class="tab-btn" data-tab="meusassistidos">Meus Assistidos</button>
   <button class="tab-btn" data-tab="assistidos">Lista do servidor</button>
+  <button class="tab-btn" data-tab="assistidosservidor">Assistidos no servidor</button>
   <button class="tab-btn" data-tab="atividade">🕒 Atividade</button>
   <button class="tab-btn" data-tab="roleta">🎲 Roleta</button>
 </nav>
 
 <main>
 
-  <!-- ABA: LISTA -->
+  <!-- ABA: FILMES -->
   <section id="tab-lista" class="tab-content active">
     <form id="addForm" class="add-form" autocomplete="off">
       <input type="text" id="movieInput" placeholder="Digite o nome de um filme..." required>
@@ -52,7 +53,7 @@
     </form>
     <div id="searchResults" class="search-results hidden"></div>
 
-    <h2 class="section-title">Para assistir <span id="listaCount" class="count-badge">0</span></h2>
+    <h2 class="section-title">Filmes <span id="listaCount" class="count-badge">0</span></h2>
     <div class="list-controls">
       <input type="text" id="filterLista" class="list-filter" placeholder="🔍 Filtrar por título...">
       <select id="sortLista" class="list-sort">
@@ -63,7 +64,7 @@
       </select>
     </div>
     <div id="watchlist" class="movie-grid"></div>
-    <p id="listaEmpty" class="empty-msg hidden">Nenhum filme na lista ainda. Busque um filme acima para adicionar.</p>
+    <p id="listaEmpty" class="empty-msg hidden">Nenhum filme cadastrado ainda. Busque um filme acima para adicionar.</p>
     <p id="listaFilterEmpty" class="empty-msg hidden">Nenhum filme encontrado com esse título.</p>
   </section>
 
@@ -99,6 +100,23 @@
     <div id="watchedGrid" class="movie-grid"></div>
     <p id="assistidosEmpty" class="empty-msg hidden">Nenhum filme foi marcado com interesse (🔥) ainda.</p>
     <p id="assistidosFilterEmpty" class="empty-msg hidden">Nenhum filme encontrado com esse título.</p>
+  </section>
+
+  <!-- ABA: ASSISTIDOS NO SERVIDOR -->
+  <section id="tab-assistidosservidor" class="tab-content">
+    <h2 class="section-title">Assistidos no servidor <span id="movedCount" class="count-badge">0</span></h2>
+    <div class="list-controls">
+      <input type="text" id="filterMovidos" class="list-filter" placeholder="🔍 Filtrar por título...">
+      <select id="sortMovidos" class="list-sort">
+        <option value="recent">Mais recentes</option>
+        <option value="rating">Nota (maior primeiro)</option>
+        <option value="ratingsCount">Mais avaliações</option>
+        <option value="interest">Mais interesse</option>
+      </select>
+    </div>
+    <div id="movedGrid" class="movie-grid"></div>
+    <p id="movedEmpty" class="empty-msg hidden">Nenhum filme foi tirado de "Para assistir" ainda.</p>
+    <p id="movidosFilterEmpty" class="empty-msg hidden">Nenhum filme encontrado com esse título.</p>
   </section>
 
   <!-- ABA: ATIVIDADE -->

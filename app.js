@@ -606,10 +606,11 @@ const presenceCol = collection(db, "presence");
       overview: r.overview || "",
       addedAt: Date.now(),
       watchedBy: {},
+      interested: {},
     };
     try {
       await addDoc(moviesCol, movie);
-      showToast(`"${movie.title}" adicionado à lista.`);
+      showToast(`"${movie.title}" adicionado aos Filmes.`);
     } catch (err) {
       console.error(err);
       showToast("Não foi possível adicionar o filme. Tente de novo.");
@@ -631,10 +632,11 @@ const presenceCol = collection(db, "presence");
       overview: "",
       addedAt: Date.now(),
       watchedBy: {},
+      interested: {},
     };
     try {
       await addDoc(moviesCol, movie);
-      showToast(`"${title}" adicionado à lista.`);
+      showToast(`"${title}" adicionado aos Filmes.`);
     } catch (err) {
       console.error(err);
       showToast("Não foi possível adicionar o filme. Tente de novo.");
@@ -797,6 +799,7 @@ const presenceCol = collection(db, "presence");
     lista: { q: "", sort: "recent" },
     meus: { q: "", sort: "recent" },
     servidor: { q: "", sort: "recent" },
+    movidos: { q: "", sort: "recent" },
   };
 
   function filterByTitle(list, q) {
@@ -832,6 +835,7 @@ const presenceCol = collection(db, "presence");
       ["filterLista", "sortLista", "lista", () => renderWatchlist()],
       ["filterMeusAssistidos", "sortMeusAssistidos", "meus", () => renderMyWatched()],
       ["filterServidor", "sortServidor", "servidor", () => renderWatched()],
+      ["filterMovidos", "sortMovidos", "movidos", () => renderMovedList()],
     ].forEach(([filterId, sortId, key, renderFn]) => {
       const filterEl = document.getElementById(filterId);
       const sortEl = document.getElementById(sortId);
@@ -850,8 +854,10 @@ const presenceCol = collection(db, "presence");
     });
   }
 
+  // "Filmes": catálogo com tudo que já foi cadastrado no site (sem filtro pessoal —
+  // quem quiser ver só o que avaliou usa a aba "Meus Assistidos").
   function renderWatchlist() {
-    const raw = currentUser ? state.movies.filter((m) => !haveIMoved(m)) : state.movies.slice();
+    const raw = state.movies.slice();
     const filtered = filterByTitle(raw, listState.lista.q);
     const list = sortMovies(filtered, listState.lista.sort, false);
     const grid = document.getElementById("watchlist");
@@ -900,6 +906,26 @@ const presenceCol = collection(db, "presence");
     attachCardHandlers(grid);
   }
 
+  // Assistidos no servidor: filmes que alguém tirou de "Para assistir" (checkbox marcada).
+  function renderMovedList() {
+    const raw = state.movies.filter((m) => anyMoved(m));
+    raw.sort((a, b) => {
+      const at = Math.max(0, ...getWatchers(a).filter((w) => w.moved).map((w) => w.watchedAt || 0));
+      const bt = Math.max(0, ...getWatchers(b).filter((w) => w.moved).map((w) => w.watchedAt || 0));
+      return (bt || 0) - (at || 0);
+    });
+    const filtered = filterByTitle(raw, listState.movidos.q);
+    const list = sortMovies(filtered, listState.movidos.sort, false);
+    const grid = document.getElementById("movedGrid");
+    const empty = document.getElementById("movedEmpty");
+    const filterEmpty = document.getElementById("movidosFilterEmpty");
+    document.getElementById("movedCount").textContent = list.length;
+    grid.innerHTML = list.map((m) => movieCardHtml(m)).join("");
+    empty.classList.toggle("hidden", raw.length !== 0);
+    filterEmpty.classList.toggle("hidden", !(raw.length !== 0 && list.length === 0));
+    attachCardHandlers(grid);
+  }
+
   function renderHeroStats() {
     const toWatchCount = currentUser
       ? state.movies.filter((m) => !haveIMoved(m)).length
@@ -915,6 +941,7 @@ const presenceCol = collection(db, "presence");
     renderWatchlist();
     renderMyWatched();
     renderWatched();
+    renderMovedList();
     renderHeroStats();
     updateRouletteAvailability();
     renderActivityFeed();
