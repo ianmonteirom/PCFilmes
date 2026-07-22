@@ -328,8 +328,9 @@ button:active { transform: scale(0.97); }
   padding: 16px 0;
 }
 
-/* Meia-estrela real (estilo Letterboxd), usada em qualquer texto de avaliação */
-.half-star {
+/* Meia-estrela real (estilo Letterboxd), usada em qualquer texto de avaliação.
+   Mesma técnica (clip-path sobre texto "★" real) já usada no seletor de nota do modal. */
+.rating-half-star {
   position: relative;
   display: inline-block;
   width: 1em;
@@ -338,25 +339,16 @@ button:active { transform: scale(0.97); }
   vertical-align: -0.05em;
 }
 
-.half-star::before {
-  content: "★";
+.rating-half-star .rhs-off {
   position: absolute;
   inset: 0;
   color: var(--star-off);
 }
 
-.half-star-fill {
+.rating-half-star .rhs-fill {
   position: absolute;
   inset: 0;
-  width: 50%;
-  overflow: hidden;
   color: inherit;
-}
-
-.half-star-fill::before {
-  content: "★";
-  position: absolute;
-  inset: 0;
 }
 
 .list-controls {

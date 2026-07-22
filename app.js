@@ -75,11 +75,16 @@ const presenceCol = collection(db, "presence");
 
   function starsMarkup(rating) {
     // rating: 0 - 5, em passos de 0.5. Meia estrela é um glifo real (estilo Letterboxd), não "½".
+    // Usa a mesma técnica (clip-path sobre texto real "★") já comprovada no seletor de nota do modal.
     if (rating == null) return "—";
     const full = Math.floor(rating);
     const half = rating - full >= 0.5;
     let out = "★".repeat(full);
-    if (half) out += '<span class="half-star"><span class="half-star-fill"></span></span>';
+    if (half) {
+      out +=
+        '<span class="rating-half-star"><span class="rhs-off">★</span>' +
+        '<span class="rhs-fill" style="clip-path: inset(0 50% 0 0);">★</span></span>';
+    }
     return out || "—";
   }
 
@@ -731,7 +736,9 @@ const presenceCol = collection(db, "presence");
     `;
   }
 
-  function attachCardHandlers(grid) {
+  function attachCardHandlers(grid, opts) {
+    opts = opts || {};
+    const showMoveCheckbox = opts.showMoveCheckbox !== false;
     grid.querySelectorAll("[data-remove]").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -757,7 +764,7 @@ const presenceCol = collection(db, "presence");
       card.addEventListener("click", () => {
         if (!requireAuth()) return;
         const movie = state.movies.find((m) => m.id === card.dataset.id);
-        if (movie) openRatingModal(movie);
+        if (movie) openRatingModal(movie, { showMoveCheckbox });
       });
     });
   }
@@ -867,7 +874,7 @@ const presenceCol = collection(db, "presence");
     grid.innerHTML = list.map((m) => movieCardHtml(m)).join("");
     empty.classList.toggle("hidden", raw.length !== 0);
     filterEmpty.classList.toggle("hidden", !(raw.length !== 0 && list.length === 0));
-    attachCardHandlers(grid);
+    attachCardHandlers(grid, { showMoveCheckbox: false });
   }
 
   // Lista pessoal: filmes que EU avaliei (independente de terem sido movidos para o servidor).
@@ -1139,12 +1146,17 @@ const presenceCol = collection(db, "presence");
   let pendingRating = 0;
   let pendingMovie = null;
 
-  function openRatingModal(movie) {
+  function openRatingModal(movie, opts) {
+    opts = opts || {};
     pendingMovie = movie;
     const mine = currentUser && movie.watchedBy && movie.watchedBy[currentUser.uid];
     pendingRating = mine ? mine.rating || 0 : 0;
     document.getElementById("ratingMovieTitle").textContent = movie.title;
     document.getElementById("moveToAssistidosCheckbox").checked = !!(mine && mine.moved);
+    // O checkbox só faz sentido perto da aba "Assistidos no servidor" — na aba Filmes
+    // (catálogo geral) ele fica escondido, mas o valor salvo (moved) continua preservado.
+    const showMove = opts.showMoveCheckbox !== false;
+    document.getElementById("moveCheckboxRow").classList.toggle("hidden", !showMove);
     updateStarDisplay();
     document.getElementById("ratingModal").classList.remove("hidden");
   }
