@@ -652,21 +652,39 @@ const presenceCol = collection(db, "presence");
   }
 
   // ---------- Rendering: Lists ----------
+  const AVATAR_MARQUEE_THRESHOLD = 5;
+
   function watchedByRowHtml(movie) {
     const watchers = getWatchers(movie);
     if (!watchers.length) return "";
-    const avatars = watchers
-      .slice(0, 6)
-      .map((w) => {
-        const src = avatarUrl(w.displayName, w.photoURL);
-        const stars = w.rating != null ? starsMarkup(w.rating) : "—";
-        return `
-          <div class="watched-avatar-wrap" data-uid="${w.uid}" data-name="${escapeHtml(w.displayName || "Alguém")}" data-stars="${escapeHtml(stars)}">
-            <img class="watched-avatar" src="${src}" alt="${escapeHtml(w.displayName || "")}">
+    const buildAvatar = (w) => {
+      const src = avatarUrl(w.displayName, w.photoURL);
+      const stars = w.rating != null ? starsMarkup(w.rating) : "—";
+      return `
+        <div class="watched-avatar-wrap" data-uid="${w.uid}" data-name="${escapeHtml(w.displayName || "Alguém")}" data-stars="${escapeHtml(stars)}">
+          <img class="watched-avatar" src="${src}" alt="${escapeHtml(w.displayName || "")}">
+        </div>
+      `;
+    };
+
+    // Muita gente assistiu: vira um carrossel passando da direita pra esquerda,
+    // "comido" pelo rótulo "Visto". Duplicamos os avatares pra dar loop contínuo.
+    if (watchers.length > AVATAR_MARQUEE_THRESHOLD) {
+      const avatarsHtml = watchers.map(buildAvatar).join("");
+      const duration = (watchers.length * 1.3).toFixed(1);
+      return `
+        <div class="watched-by-row" title="Assistido por">
+          <span class="watched-by-label">Visto</span>
+          <div class="watched-avatars-viewport">
+            <div class="watched-avatars-track marquee" style="animation-duration:${duration}s;">
+              ${avatarsHtml}${avatarsHtml}
+            </div>
           </div>
-        `;
-      })
-      .join("");
+        </div>
+      `;
+    }
+
+    const avatars = watchers.map(buildAvatar).join("");
     return `
       <div class="watched-by-row" title="Assistido por">
         <span class="watched-by-label">Visto</span>
@@ -721,6 +739,7 @@ const presenceCol = collection(db, "presence");
     grid.querySelectorAll("[data-interest]").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
+        if (!btn.classList.contains("active")) spawnFireBurst(btn);
         toggleInterest(btn.dataset.interest);
       });
     });
@@ -758,6 +777,19 @@ const presenceCol = collection(db, "presence");
 
   function hideAvatarTooltip() {
     document.getElementById("avatarTooltip").classList.add("hidden");
+  }
+
+  // Efeito de fogo subindo, ao lado do botão, quando marca interesse.
+  function spawnFireBurst(btn) {
+    const rect = btn.getBoundingClientRect();
+    const el = document.createElement("span");
+    el.className = "fire-burst";
+    el.textContent = "🔥";
+    el.style.left = rect.left + rect.width / 2 + "px";
+    el.style.top = rect.top + "px";
+    document.body.appendChild(el);
+    el.addEventListener("animationend", () => el.remove());
+    setTimeout(() => el.remove(), 1200); // fallback caso animationend não dispare
   }
 
   // ---------- Filtro e ordenação de listas ----------
@@ -852,14 +884,10 @@ const presenceCol = collection(db, "presence");
     attachCardHandlers(grid);
   }
 
-  // Lista do servidor: TODOS os filmes que qualquer pessoa do grupo já moveu (compartilhada).
+  // Lista do servidor: filmes com pelo menos 1 marca de interesse (🔥) de qualquer pessoa do grupo.
   function renderWatched() {
-    const raw = state.movies.filter((m) => anyMoved(m));
-    raw.sort((a, b) => {
-      const at = Math.max(0, ...getWatchers(a).filter((w) => w.moved).map((w) => w.watchedAt || 0));
-      const bt = Math.max(0, ...getWatchers(b).filter((w) => w.moved).map((w) => w.watchedAt || 0));
-      return (bt || 0) - (at || 0);
-    });
+    const raw = state.movies.filter((m) => interestCount(m) > 0);
+    raw.sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
     const filtered = filterByTitle(raw, listState.servidor.q);
     const list = sortMovies(filtered, listState.servidor.sort, false);
     const grid = document.getElementById("watchedGrid");
@@ -951,8 +979,9 @@ const presenceCol = collection(db, "presence");
   let currentPick = null;
   let isSpinning = false;
 
+  // A roleta sorteia entre os filmes da Lista do servidor (≥1 marca de interesse).
   function rouletteMoviePool() {
-    return currentUser ? state.movies.filter((m) => !haveIMoved(m)) : state.movies.slice();
+    return state.movies.filter((m) => interestCount(m) > 0);
   }
 
   function resetRouletteView() {
@@ -1156,7 +1185,7 @@ const presenceCol = collection(db, "presence");
         if (moveChecked) {
           msg = wasMovedBefore
             ? `Nota de "${movieTitle}" atualizada!`
-            : `"${movieTitle}" movido para a Lista do servidor!`;
+            : `"${movieTitle}" saiu de "Para assistir"!`;
         } else if (wasMovedBefore) {
           msg = `"${movieTitle}" voltou para Para assistir.`;
         } else {

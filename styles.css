@@ -409,6 +409,24 @@ button:active { transform: scale(0.97); }
   color: #fff;
 }
 
+/* Fogo subindo quando marca interesse */
+.fire-burst {
+  position: fixed;
+  pointer-events: none;
+  z-index: 300;
+  font-size: 1.15rem;
+  transform: translate(-50%, 0) scale(0.8);
+  opacity: 1;
+  animation: fireRise 0.85s ease-out forwards;
+}
+
+@keyframes fireRise {
+  0% { opacity: 1; transform: translate(-50%, 0) scale(0.7) rotate(-8deg); }
+  25% { opacity: 1; transform: translate(-50%, -16px) scale(1.25) rotate(6deg); }
+  60% { opacity: 0.9; transform: translate(-50%, -34px) scale(1.05) rotate(-4deg); }
+  100% { opacity: 0; transform: translate(-50%, -54px) scale(0.85) rotate(2deg); }
+}
+
 /* ---------- Movie cards ---------- */
 .movie-grid {
   display: grid;
@@ -503,17 +521,59 @@ button:active { transform: scale(0.97); }
 }
 
 .watched-by-label {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
   font-size: 0.6rem;
   color: var(--pink-soft);
   text-transform: uppercase;
   letter-spacing: 0.03em;
   margin-right: 2px;
   white-space: nowrap;
+  background: rgba(10, 5, 10, 0.88);
+  padding: 2px 4px;
+  border-radius: 4px;
+  box-shadow: 6px 0 8px 2px rgba(10, 5, 10, 0.88);
 }
 
 .watched-avatar-wrap {
   position: relative;
   flex-shrink: 0;
+}
+
+/* Carrossel: quando tem muita gente que assistiu, os avatares "correm" da direita
+   pra esquerda e somem por baixo do rótulo "Visto". */
+.watched-avatars-viewport {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 20px;
+  overflow: hidden;
+}
+
+.watched-avatars-track {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: max-content;
+}
+
+.watched-avatars-track.marquee {
+  animation-name: avatarMarquee;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.watched-avatars-viewport:hover .watched-avatars-track.marquee {
+  animation-play-state: paused;
+}
+
+@keyframes avatarMarquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
 
 .movie-card .watched-avatar {
