@@ -447,11 +447,10 @@ button:active { transform: scale(0.97); }
   background: var(--card-hover);
 }
 
-.watched-avatar-tooltip {
-  position: absolute;
-  bottom: 26px;
-  left: 50%;
-  transform: translateX(-50%);
+/* Tooltip global (fixo, evita corte nas bordas do card) */
+.avatar-tooltip-global {
+  position: fixed;
+  z-index: 200;
   background: var(--bg-alt);
   border: 1px solid var(--pink);
   color: var(--text);
@@ -459,21 +458,22 @@ button:active { transform: scale(0.97); }
   border-radius: 8px;
   font-size: 0.7rem;
   white-space: nowrap;
-  opacity: 0;
   pointer-events: none;
-  transition: opacity 0.12s;
-  z-index: 5;
   box-shadow: 0 4px 14px rgba(0,0,0,0.4);
 }
 
-.watched-avatar-wrap:hover .watched-avatar-tooltip {
-  opacity: 1;
-}
-
-.watched-avatar-tooltip .tt-stars {
+.avatar-tooltip-global .tt-stars {
   color: var(--pink-soft);
   letter-spacing: 1px;
 }
+
+.card-team-avg {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.card-team-avg .tam-count { opacity: 0.7; }
 
 /* ---------- Roulette ---------- */
 .roulette-idle {
@@ -531,6 +531,69 @@ button:active { transform: scale(0.97); }
 .roulette-actions {
   display: flex;
   gap: 14px;
+}
+
+/* ---------- Roulette spin animation ---------- */
+.roulette-spinning {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.spin-caption {
+  color: var(--muted);
+  margin-bottom: 24px;
+  font-size: 1rem;
+}
+
+.spin-cards {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.spin-card {
+  width: 140px;
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, opacity 0.35s ease, filter 0.35s ease;
+  transform: scale(0.94);
+}
+
+.spin-card img {
+  width: 100%;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  display: block;
+  background: linear-gradient(160deg, var(--card-hover), var(--card));
+}
+
+.spin-card .spin-card-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 8px 8px;
+  line-height: 1.25;
+}
+
+.spin-card.active {
+  transform: scale(1.08);
+  border-color: var(--pink);
+  box-shadow: 0 0 0 3px var(--pink-glow), 0 10px 28px rgba(255, 79, 168, 0.35);
+}
+
+.spin-card.eliminated {
+  opacity: 0.35;
+  filter: grayscale(0.6);
+  transform: scale(0.88);
+}
+
+.spin-card.winner {
+  transform: scale(1.14);
+  border-color: var(--pink);
+  box-shadow: 0 0 0 4px var(--pink-glow), 0 16px 40px rgba(255, 79, 168, 0.45);
 }
 
 /* ---------- Modal ---------- */
@@ -841,11 +904,160 @@ button:active { transform: scale(0.97); }
   line-height: 1;
 }
 
+.move-checkbox-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 14px 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.move-checkbox-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--pink);
+  cursor: pointer;
+}
+
 .modal-actions {
   display: flex;
   justify-content: center;
   gap: 12px;
   margin-top: 18px;
+}
+
+/* ---------- Perfil de outro usuário ---------- */
+.user-profile-box {
+  max-width: 460px;
+}
+
+.mini-grid-title {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 4px 0 12px;
+  text-align: center;
+}
+
+.mini-movie-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.mini-movie-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: left;
+}
+
+.mini-movie-card img {
+  width: 100%;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  display: block;
+  background: linear-gradient(160deg, var(--card-hover), var(--card));
+}
+
+.mini-movie-title {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 5px 6px 2px;
+  line-height: 1.2;
+}
+
+.mini-movie-stars {
+  font-size: 0.7rem;
+  color: var(--pink-soft);
+  padding: 0 6px 6px;
+  letter-spacing: 1px;
+}
+
+/* ---------- Online / Atividade ---------- */
+.online-now-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.online-user-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 12px 4px 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+}
+
+.online-user-chip:hover { border-color: var(--pink); transform: translateY(-1px); }
+
+.online-user-chip img {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.activity-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.activity-item {
+  display: flex;
+  gap: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+}
+
+.activity-item:hover { border-color: var(--pink); transform: translateY(-1px); }
+
+.activity-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--card-hover);
+  border: 1px solid var(--pink-glow);
+}
+
+.activity-body { min-width: 0; }
+
+.activity-line {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.activity-pending {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.activity-time {
+  margin: 3px 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
 }
 
 /* ---------- Toast ---------- */

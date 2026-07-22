@@ -11,6 +11,7 @@ import {
   query,
   orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+// (deleteDoc é reutilizado também para limpar a presença ao sair)
 import {
   getAuth,
   onAuthStateChanged,
@@ -38,6 +39,7 @@ const db = getFirestore(firebaseApp);
 const auth = getAuth(firebaseApp);
 const moviesCol = collection(db, "movies");
 const usersCol = collection(db, "users");
+const presenceCol = collection(db, "presence");
 
 (() => {
   "use strict";
@@ -92,8 +94,41 @@ const usersCol = collection(db, "users");
       .sort((a, b) => (a.watchedAt || 0) - (b.watchedAt || 0));
   }
 
-  function iHaveWatched(movie) {
-    return !!(currentUser && movie.watchedBy && movie.watchedBy[currentUser.uid]);
+  function getMyEntry(movie) {
+    return currentUser && movie.watchedBy ? movie.watchedBy[currentUser.uid] || null : null;
+  }
+
+  function haveIRated(movie) {
+    return !!getMyEntry(movie);
+  }
+
+  function haveIMoved(movie) {
+    const e = getMyEntry(movie);
+    return !!(e && e.moved);
+  }
+
+  function anyMoved(movie) {
+    return getWatchers(movie).some((w) => w.moved);
+  }
+
+  function teamAverage(movie) {
+    const rated = getWatchers(movie).filter((w) => w.rating != null);
+    if (!rated.length) return null;
+    return { avg: rated.reduce((a, w) => a + w.rating, 0) / rated.length, count: rated.length };
+  }
+
+  function relativeTime(ts) {
+    if (!ts) return "";
+    const diff = Date.now() - ts;
+    const min = Math.floor(diff / 60000);
+    if (min < 1) return "agora mesmo";
+    if (min < 60) return `há ${min} min`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `há ${hr}h`;
+    const days = Math.floor(hr / 24);
+    if (days < 30) return `há ${days}d`;
+    const months = Math.floor(days / 30);
+    return `há ${months}m`;
   }
 
   function myDisplayName() {
@@ -264,8 +299,10 @@ const usersCol = collection(db, "users");
             { merge: true }
           ).catch((err) => console.error("Falha ao sincronizar perfil:", err));
         }
+        startPresenceHeartbeat();
       } else {
         currentProfile = null;
+        stopPresenceHeartbeat();
       }
       updateAuthUI();
       renderAll();
@@ -428,8 +465,9 @@ const usersCol = collection(db, "users");
     document.getElementById("profilePhotoPreview").src = avatarUrl(myDisplayName(), myPhotoURL());
     document.getElementById("profileNameInput").value = myDisplayName();
 
-    const watchedMovies = state.movies.filter((m) => iHaveWatched(m));
-    const ratings = watchedMovies
+    const watchedMovies = state.movies.filter((m) => haveIMoved(m));
+    const ratedMovies = state.movies.filter((m) => haveIRated(m));
+    const ratings = ratedMovies
       .map((m) => m.watchedBy[currentUser.uid].rating)
       .filter((r) => r != null);
     const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
@@ -578,9 +616,8 @@ const usersCol = collection(db, "users");
         const src = avatarUrl(w.displayName, w.photoURL);
         const stars = w.rating != null ? starsMarkup(w.rating) : "—";
         return `
-          <div class="watched-avatar-wrap">
+          <div class="watched-avatar-wrap" data-uid="${w.uid}" data-name="${escapeHtml(w.displayName || "Alguém")}" data-stars="${escapeHtml(stars)}">
             <img class="watched-avatar" src="${src}" alt="${escapeHtml(w.displayName || "")}">
-            <div class="watched-avatar-tooltip">${escapeHtml(w.displayName || "Alguém")} — <span class="tt-stars">${stars}</span></div>
           </div>
         `;
       })
@@ -593,12 +630,18 @@ const usersCol = collection(db, "users");
     `;
   }
 
-  function movieCardHtml(m, opts) {
-    opts = opts || {};
+  function movieCardHtml(m) {
     const poster = m.poster || "";
-    const myRating = currentUser && m.watchedBy && m.watchedBy[currentUser.uid] ? m.watchedBy[currentUser.uid].rating : null;
-    const stars = opts.showMyRating && myRating != null ? `<p class="card-stars">${starsMarkup(myRating)}</p>` : "";
-    const hint = iHaveWatched(m) ? "Toque para editar sua nota" : "Toque para marcar como assistido";
+    const mine = getMyEntry(m);
+    const myStars = mine && mine.rating != null ? `<p class="card-stars">${starsMarkup(mine.rating)}</p>` : "";
+    const team = teamAverage(m);
+    const teamStars = team
+      ? `<p class="card-team-avg">👥 ${team.avg.toFixed(1)} <span class="tam-count">(${team.count})</span></p>`
+      : "";
+    let hint;
+    if (mine && mine.moved) hint = "Toque para editar sua nota";
+    else if (mine) hint = "Toque para editar sua nota (ainda em Para assistir)";
+    else hint = "Toque para marcar como assistido";
     return `
       <div class="movie-card" data-id="${m.id}" title="${hint}">
         <button class="remove-btn" data-remove="${m.id}" title="Remover">✕</button>
@@ -609,7 +652,8 @@ const usersCol = collection(db, "users");
         <div class="movie-card-body">
           <div class="card-title">${escapeHtml(m.title)}</div>
           <div class="card-year">${escapeHtml(m.year || "")}</div>
-          ${stars}
+          ${myStars}
+          ${teamStars}
         </div>
       </div>
     `;
@@ -622,6 +666,14 @@ const usersCol = collection(db, "users");
         removeMovie(btn.dataset.remove);
       });
     });
+    grid.querySelectorAll(".watched-avatar-wrap").forEach((wrap) => {
+      wrap.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openUserProfileModal(wrap.dataset.uid);
+      });
+      wrap.addEventListener("mouseenter", () => showAvatarTooltip(wrap));
+      wrap.addEventListener("mouseleave", hideAvatarTooltip);
+    });
     grid.querySelectorAll(".movie-card").forEach((card) => {
       card.addEventListener("click", () => {
         if (!requireAuth()) return;
@@ -631,22 +683,41 @@ const usersCol = collection(db, "users");
     });
   }
 
+  // ---------- Tooltip global (evita corte nas bordas do card) ----------
+  function showAvatarTooltip(el) {
+    const tooltip = document.getElementById("avatarTooltip");
+    tooltip.innerHTML = `${escapeHtml(el.dataset.name || "Alguém")} — <span class="tt-stars">${el.dataset.stars || "—"}</span>`;
+    tooltip.classList.remove("hidden");
+    const rect = el.getBoundingClientRect();
+    const tRect = tooltip.getBoundingClientRect();
+    let left = rect.left + rect.width / 2 - tRect.width / 2;
+    left = Math.max(6, Math.min(left, window.innerWidth - tRect.width - 6));
+    let top = rect.top - tRect.height - 8;
+    if (top < 4) top = rect.bottom + 8;
+    tooltip.style.left = left + "px";
+    tooltip.style.top = top + "px";
+  }
+
+  function hideAvatarTooltip() {
+    document.getElementById("avatarTooltip").classList.add("hidden");
+  }
+
   function renderWatchlist() {
     const list = currentUser
-      ? state.movies.filter((m) => !iHaveWatched(m))
+      ? state.movies.filter((m) => !haveIMoved(m))
       : state.movies.slice();
     const grid = document.getElementById("watchlist");
     const empty = document.getElementById("listaEmpty");
     document.getElementById("listaCount").textContent = list.length;
-    grid.innerHTML = list.map((m) => movieCardHtml(m, { showMyRating: false })).join("");
+    grid.innerHTML = list.map((m) => movieCardHtml(m)).join("");
     empty.classList.toggle("hidden", list.length !== 0);
     attachCardHandlers(grid);
   }
 
   function renderWatched() {
     const list = currentUser
-      ? state.movies.filter((m) => iHaveWatched(m))
-      : state.movies.filter((m) => getWatchers(m).length > 0);
+      ? state.movies.filter((m) => haveIMoved(m))
+      : state.movies.filter((m) => anyMoved(m));
     list.sort((a, b) => {
       const aw = currentUser && a.watchedBy && a.watchedBy[currentUser.uid];
       const bw = currentUser && b.watchedBy && b.watchedBy[currentUser.uid];
@@ -657,18 +728,18 @@ const usersCol = collection(db, "users");
     const grid = document.getElementById("watchedGrid");
     const empty = document.getElementById("assistidosEmpty");
     document.getElementById("assistidosCount").textContent = list.length;
-    grid.innerHTML = list.map((m) => movieCardHtml(m, { showMyRating: true })).join("");
+    grid.innerHTML = list.map((m) => movieCardHtml(m)).join("");
     empty.classList.toggle("hidden", list.length !== 0);
     attachCardHandlers(grid);
   }
 
   function renderHeroStats() {
     const toWatchCount = currentUser
-      ? state.movies.filter((m) => !iHaveWatched(m)).length
+      ? state.movies.filter((m) => !haveIMoved(m)).length
       : state.movies.length;
     const watchedCount = currentUser
-      ? state.movies.filter((m) => iHaveWatched(m)).length
-      : state.movies.filter((m) => getWatchers(m).length > 0).length;
+      ? state.movies.filter((m) => haveIMoved(m)).length
+      : state.movies.filter((m) => anyMoved(m)).length;
     const heroToWatch = document.getElementById("heroToWatch");
     const heroWatched = document.getElementById("heroWatched");
     if (heroToWatch) heroToWatch.textContent = `${toWatchCount} para assistir`;
@@ -680,11 +751,12 @@ const usersCol = collection(db, "users");
     renderWatched();
     renderHeroStats();
     updateRouletteAvailability();
+    renderActivityFeed();
   }
 
   function updateRouletteAvailability() {
     const pool = currentUser
-      ? state.movies.filter((m) => !iHaveWatched(m))
+      ? state.movies.filter((m) => !haveIMoved(m))
       : state.movies.slice();
     const idleVisible = !document.getElementById("rouletteIdle").classList.contains("hidden");
     if (idleVisible) {
@@ -693,35 +765,162 @@ const usersCol = collection(db, "users");
     document.getElementById("spinBtn").disabled = pool.length === 0;
   }
 
+  // ---------- Atividade ----------
+  function renderActivityFeed() {
+    const feedEl = document.getElementById("activityFeed");
+    const emptyEl = document.getElementById("activityEmpty");
+    if (!feedEl) return;
+    const events = [];
+    state.movies.forEach((m) => {
+      getWatchers(m).forEach((w) => {
+        if (w.rating != null) {
+          events.push({
+            uid: w.uid,
+            displayName: w.displayName,
+            photoURL: w.photoURL,
+            rating: w.rating,
+            movieTitle: m.title,
+            watchedAt: w.watchedAt || 0,
+            moved: !!w.moved,
+          });
+        }
+      });
+    });
+    events.sort((a, b) => (b.watchedAt || 0) - (a.watchedAt || 0));
+    const top = events.slice(0, 30);
+    emptyEl.classList.toggle("hidden", top.length !== 0);
+    feedEl.innerHTML = top
+      .map(
+        (ev) => `
+      <div class="activity-item" data-uid="${ev.uid}">
+        <img class="activity-avatar" src="${avatarUrl(ev.displayName, ev.photoURL)}" alt="">
+        <div class="activity-body">
+          <p class="activity-line"><strong>${escapeHtml(ev.displayName || "Alguém")}</strong> avaliou <strong>${escapeHtml(ev.movieTitle)}</strong> com ${starsMarkup(ev.rating)}${
+          ev.moved ? "" : ' <span class="activity-pending">(ainda em Para assistir)</span>'
+        }</p>
+          <p class="activity-time">${relativeTime(ev.watchedAt)}</p>
+        </div>
+      </div>
+    `
+      )
+      .join("");
+    feedEl.querySelectorAll("[data-uid]").forEach((item) => {
+      item.addEventListener("click", () => openUserProfileModal(item.dataset.uid));
+    });
+  }
+
   // ---------- Roulette ----------
   let currentPick = null;
+  let isSpinning = false;
+
+  function rouletteMoviePool() {
+    return currentUser ? state.movies.filter((m) => !haveIMoved(m)) : state.movies.slice();
+  }
 
   function resetRouletteView() {
     document.getElementById("rouletteResult").classList.add("hidden");
+    document.getElementById("rouletteSpinning").classList.add("hidden");
     document.getElementById("rouletteIdle").classList.remove("hidden");
-    const pool = currentUser
-      ? state.movies.filter((m) => !iHaveWatched(m))
-      : state.movies.slice();
+    const pool = rouletteMoviePool();
     document.getElementById("rouletteEmpty").classList.toggle("hidden", pool.length !== 0);
     document.getElementById("spinBtn").disabled = pool.length === 0;
     currentPick = null;
+    isSpinning = false;
+  }
+
+  function shuffleSample(arr, n) {
+    const copy = arr.slice();
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy.slice(0, n);
   }
 
   function spinRoulette() {
-    const pool = currentUser
-      ? state.movies.filter((m) => !iHaveWatched(m))
-      : state.movies.slice();
+    if (isSpinning) return;
+    const pool = rouletteMoviePool();
     if (!pool.length) {
       resetRouletteView();
       return;
     }
-    let candidates = pool;
+    let candidatePool = pool;
     if (pool.length > 1 && currentPick) {
-      candidates = pool.filter((m) => m.id !== currentPick.id);
+      candidatePool = pool.filter((m) => m.id !== currentPick.id);
     }
-    const pick = candidates[Math.floor(Math.random() * candidates.length)];
-    currentPick = pick;
-    showRoulettePick(pick);
+    const finalists = shuffleSample(candidatePool.length ? candidatePool : pool, Math.min(3, (candidatePool.length ? candidatePool : pool).length));
+    const winner = finalists[Math.floor(Math.random() * finalists.length)];
+    runSpinAnimation(finalists, winner);
+  }
+
+  function runSpinAnimation(finalists, winner) {
+    isSpinning = true;
+    document.getElementById("spinBtn").disabled = true;
+    document.getElementById("rerollBtn").disabled = true;
+    document.getElementById("rouletteIdle").classList.add("hidden");
+    document.getElementById("rouletteResult").classList.add("hidden");
+    const spinningEl = document.getElementById("rouletteSpinning");
+    spinningEl.classList.remove("hidden");
+
+    const cardsEl = document.getElementById("spinCards");
+    cardsEl.innerHTML = finalists
+      .map(
+        (m, i) => `
+      <div class="spin-card" data-idx="${i}">
+        <img src="${m.poster || ""}" alt="">
+        <div class="spin-card-title">${escapeHtml(m.title)}</div>
+      </div>
+    `
+      )
+      .join("");
+    const cardEls = Array.from(cardsEl.querySelectorAll(".spin-card"));
+    const winnerIdx = finalists.findIndex((m) => m.id === winner.id);
+
+    // Sequência de destaque tipo "roleta", desacelerando até o vencedor.
+    const steps = [];
+    const totalSteps = finalists.length <= 1 ? 1 : 8 + Math.floor(Math.random() * 4);
+    let lastIdx = -1;
+    for (let i = 0; i < totalSteps - 1; i++) {
+      let idx;
+      do {
+        idx = Math.floor(Math.random() * finalists.length);
+      } while (idx === lastIdx && finalists.length > 1);
+      lastIdx = idx;
+      steps.push(idx);
+    }
+    steps.push(winnerIdx);
+
+    let stepIndex = 0;
+    function runStep() {
+      cardEls.forEach((el) => el.classList.remove("active"));
+      const idx = steps[stepIndex];
+      if (cardEls[idx]) cardEls[idx].classList.add("active");
+      stepIndex++;
+      if (stepIndex < steps.length) {
+        const progress = stepIndex / steps.length;
+        const delay = 90 + progress * progress * 380; // easing: acelera devagar no início, desacelera no fim
+        setTimeout(runStep, delay);
+      } else {
+        setTimeout(() => finishSpin(cardEls, winnerIdx, winner), 500);
+      }
+    }
+    runStep();
+  }
+
+  function finishSpin(cardEls, winnerIdx, winner) {
+    cardEls.forEach((el, i) => {
+      el.classList.remove("active");
+      if (i === winnerIdx) el.classList.add("winner");
+      else el.classList.add("eliminated");
+    });
+    setTimeout(() => {
+      currentPick = winner;
+      isSpinning = false;
+      document.getElementById("spinBtn").disabled = false;
+      document.getElementById("rerollBtn").disabled = false;
+      document.getElementById("rouletteSpinning").classList.add("hidden");
+      showRoulettePick(winner);
+    }, 700);
   }
 
   function showRoulettePick(m) {
@@ -751,6 +950,7 @@ const usersCol = collection(db, "users");
     const mine = currentUser && movie.watchedBy && movie.watchedBy[currentUser.uid];
     pendingRating = mine ? mine.rating || 0 : 0;
     document.getElementById("ratingMovieTitle").textContent = movie.title;
+    document.getElementById("moveToAssistidosCheckbox").checked = !!(mine && mine.moved);
     updateStarDisplay();
     document.getElementById("ratingModal").classList.remove("hidden");
   }
@@ -797,10 +997,12 @@ const usersCol = collection(db, "users");
       const movieId = pendingMovie.id;
       const movieTitle = pendingMovie.title;
       const existing = pendingMovie.watchedBy && pendingMovie.watchedBy[currentUser.uid];
-      const wasAlreadyWatched = !!existing;
+      const hadRatingBefore = !!existing;
+      const wasMovedBefore = !!(existing && existing.moved);
       const watchedAt = (existing && existing.watchedAt) || Date.now();
       const rating = pendingRating || 0;
       const uid = currentUser.uid;
+      const moveChecked = document.getElementById("moveToAssistidosCheckbox").checked;
       closeRatingModal();
       try {
         await updateDoc(doc(db, "movies", movieId), {
@@ -809,18 +1011,145 @@ const usersCol = collection(db, "users");
             photoURL: myPhotoURL(),
             rating,
             watchedAt,
+            moved: moveChecked,
           },
         });
-        showToast(
-          wasAlreadyWatched
+        let msg;
+        if (moveChecked) {
+          msg = wasMovedBefore
             ? `Nota de "${movieTitle}" atualizada!`
-            : `"${movieTitle}" marcado como assistido!`
-        );
+            : `"${movieTitle}" movido para Assistidos no servidor!`;
+        } else if (wasMovedBefore) {
+          msg = `"${movieTitle}" voltou para Para assistir.`;
+        } else {
+          msg = hadRatingBefore
+            ? `Nota de "${movieTitle}" atualizada!`
+            : `Nota de "${movieTitle}" salva! Continua em Para assistir.`;
+        }
+        showToast(msg);
       } catch (err) {
         console.error(err);
         showToast("Não foi possível salvar a nota. Tente de novo.");
       }
     });
+  }
+
+  // ---------- Presença online ----------
+  let presenceHeartbeatTimer = null;
+  let presenceDocs = [];
+
+  function startPresenceHeartbeat() {
+    if (!currentUser) return;
+    const beat = () => {
+      if (!currentUser) return;
+      setDoc(
+        doc(db, "presence", currentUser.uid),
+        { displayName: myDisplayName(), photoURL: myPhotoURL(), lastSeen: Date.now() },
+        { merge: true }
+      ).catch((err) => console.error("Falha no heartbeat de presença:", err));
+    };
+    beat();
+    clearInterval(presenceHeartbeatTimer);
+    presenceHeartbeatTimer = setInterval(beat, 25000);
+  }
+
+  function stopPresenceHeartbeat() {
+    clearInterval(presenceHeartbeatTimer);
+    presenceHeartbeatTimer = null;
+    if (currentUser) {
+      deleteDoc(doc(db, "presence", currentUser.uid)).catch(() => {});
+    }
+  }
+
+  function initPresence() {
+    onSnapshot(
+      presenceCol,
+      (snapshot) => {
+        presenceDocs = snapshot.docs.map((d) => ({ uid: d.id, ...d.data() }));
+        renderOnlineUsers();
+      },
+      (err) => console.error("Falha ao ler presença:", err)
+    );
+    setInterval(renderOnlineUsers, 15000);
+  }
+
+  function renderOnlineUsers() {
+    const el = document.getElementById("onlineNowRow");
+    if (!el) return;
+    const now = Date.now();
+    const online = presenceDocs.filter((p) => p.lastSeen && now - p.lastSeen < 70000);
+    if (!online.length) {
+      el.innerHTML = '<p class="empty-msg">Ninguém online agora.</p>';
+      return;
+    }
+    el.innerHTML = online
+      .map(
+        (p) => `
+      <div class="online-user-chip" data-uid="${p.uid}">
+        <img src="${avatarUrl(p.displayName, p.photoURL)}" alt="">
+        <span>${escapeHtml(p.displayName || "Alguém")}</span>
+      </div>
+    `
+      )
+      .join("");
+    el.querySelectorAll("[data-uid]").forEach((chip) => {
+      chip.addEventListener("click", () => openUserProfileModal(chip.dataset.uid));
+    });
+  }
+
+  // ---------- Perfil de outro usuário (somente leitura) ----------
+  function initUserProfileModal() {
+    const modal = document.getElementById("userProfileModal");
+    const closeBtn = document.getElementById("closeUserProfileBtn");
+    closeBtn.addEventListener("click", closeUserProfileModal);
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeUserProfileModal();
+    });
+  }
+
+  function openUserProfileModal(uid) {
+    if (!uid) return;
+    let sample = null;
+    for (const m of state.movies) {
+      if (m.watchedBy && m.watchedBy[uid]) {
+        sample = m.watchedBy[uid];
+        break;
+      }
+    }
+    const presenceInfo = presenceDocs.find((p) => p.uid === uid);
+    const displayName = (sample && sample.displayName) || (presenceInfo && presenceInfo.displayName) || "Usuário";
+    const photoURL = (sample && sample.photoURL) || (presenceInfo && presenceInfo.photoURL) || "";
+
+    const ratedMovies = state.movies.filter((m) => m.watchedBy && m.watchedBy[uid] && m.watchedBy[uid].rating != null);
+    const ratings = ratedMovies.map((m) => m.watchedBy[uid].rating);
+    const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
+    const movedCount = ratedMovies.filter((m) => m.watchedBy[uid].moved).length;
+
+    document.getElementById("userProfilePhoto").src = avatarUrl(displayName, photoURL);
+    document.getElementById("userProfileName").textContent = displayName;
+    document.getElementById("userProfileStatWatched").textContent = movedCount;
+    document.getElementById("userProfileStatAvg").textContent = avg != null ? avg.toFixed(1) : "—";
+
+    ratedMovies.sort((a, b) => (b.watchedBy[uid].rating || 0) - (a.watchedBy[uid].rating || 0));
+    const grid = document.getElementById("userProfileGrid");
+    grid.innerHTML =
+      ratedMovies
+        .map(
+          (m) => `
+      <div class="mini-movie-card">
+        <img src="${m.poster || ""}" alt="">
+        <div class="mini-movie-title">${escapeHtml(m.title)}</div>
+        <div class="mini-movie-stars">${starsMarkup(m.watchedBy[uid].rating)}</div>
+      </div>
+    `
+        )
+        .join("") || '<p class="empty-msg">Ainda sem avaliações.</p>';
+
+    document.getElementById("userProfileModal").classList.remove("hidden");
+  }
+
+  function closeUserProfileModal() {
+    document.getElementById("userProfileModal").classList.add("hidden");
   }
 
   // ---------- Firestore realtime sync ----------
@@ -844,10 +1173,18 @@ const usersCol = collection(db, "users");
     initTabs();
     initAuth();
     initProfileModal();
+    initUserProfileModal();
     initAddForm();
     initRoulette();
     initRatingModal();
     resetRouletteView();
     initFirestoreSync();
+    initPresence();
+  });
+
+  window.addEventListener("beforeunload", () => {
+    if (currentUser) {
+      deleteDoc(doc(db, "presence", currentUser.uid)).catch(() => {});
+    }
   });
 })();
