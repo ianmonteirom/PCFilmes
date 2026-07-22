@@ -1156,7 +1156,7 @@ const presenceCol = collection(db, "presence");
         if (moveChecked) {
           msg = wasMovedBefore
             ? `Nota de "${movieTitle}" atualizada!`
-            : `"${movieTitle}" movido para Assistidos no servidor!`;
+            : `"${movieTitle}" movido para a Lista do servidor!`;
         } else if (wasMovedBefore) {
           msg = `"${movieTitle}" voltou para Para assistir.`;
         } else {

@@ -36,10 +36,10 @@
 
 <nav class="tabs">
   <button class="tab-btn active" data-tab="lista">Minha Lista</button>
-  <button class="tab-btn" data-tab="roleta">🎲 Roleta</button>
+  <button class="tab-btn" data-tab="assistidos">Lista do servidor</button>
   <button class="tab-btn" data-tab="meusassistidos">Meus Assistidos</button>
-  <button class="tab-btn" data-tab="assistidos">Assistidos no servidor</button>
   <button class="tab-btn" data-tab="atividade">🕒 Atividade</button>
+  <button class="tab-btn" data-tab="roleta">🎲 Roleta</button>
 </nav>
 
 <main>
@@ -65,6 +65,50 @@
     <div id="watchlist" class="movie-grid"></div>
     <p id="listaEmpty" class="empty-msg hidden">Nenhum filme na lista ainda. Busque um filme acima para adicionar.</p>
     <p id="listaFilterEmpty" class="empty-msg hidden">Nenhum filme encontrado com esse título.</p>
+  </section>
+
+  <!-- ABA: LISTA DO SERVIDOR -->
+  <section id="tab-assistidos" class="tab-content">
+    <h2 class="section-title">Lista do servidor <span id="assistidosCount" class="count-badge">0</span></h2>
+    <div class="list-controls">
+      <input type="text" id="filterServidor" class="list-filter" placeholder="🔍 Filtrar por título...">
+      <select id="sortServidor" class="list-sort">
+        <option value="recent">Mais recentes</option>
+        <option value="rating">Nota (maior primeiro)</option>
+        <option value="ratingsCount">Mais avaliações</option>
+        <option value="interest">Mais interesse</option>
+      </select>
+    </div>
+    <div id="watchedGrid" class="movie-grid"></div>
+    <p id="assistidosEmpty" class="empty-msg hidden">Nenhum filme foi movido para a Lista do servidor ainda.</p>
+    <p id="assistidosFilterEmpty" class="empty-msg hidden">Nenhum filme encontrado com esse título.</p>
+  </section>
+
+  <!-- ABA: MEUS ASSISTIDOS -->
+  <section id="tab-meusassistidos" class="tab-content">
+    <h2 class="section-title">Meus Assistidos <span id="meusAssistidosCount" class="count-badge">0</span></h2>
+    <div class="list-controls">
+      <input type="text" id="filterMeusAssistidos" class="list-filter" placeholder="🔍 Filtrar por título...">
+      <select id="sortMeusAssistidos" class="list-sort">
+        <option value="recent">Mais recentes</option>
+        <option value="rating">Minha nota (maior primeiro)</option>
+        <option value="ratingsCount">Mais avaliações</option>
+        <option value="interest">Mais interesse</option>
+      </select>
+    </div>
+    <div id="myWatchedGrid" class="movie-grid"></div>
+    <p id="meusAssistidosEmpty" class="empty-msg hidden">Você ainda não avaliou nenhum filme.</p>
+    <p id="meusAssistidosFilterEmpty" class="empty-msg hidden">Nenhum filme encontrado com esse título.</p>
+  </section>
+
+  <!-- ABA: ATIVIDADE -->
+  <section id="tab-atividade" class="tab-content">
+    <h2 class="section-title">🟢 Online agora</h2>
+    <div id="onlineNowRow" class="online-now-row"></div>
+
+    <h2 class="section-title">📝 Últimas avaliações</h2>
+    <div id="activityFeed" class="activity-feed"></div>
+    <p id="activityEmpty" class="empty-msg hidden">Nenhuma atividade ainda.</p>
   </section>
 
   <!-- ABA: ROLETA -->
@@ -94,50 +138,6 @@
         <button id="markWatchedBtn" class="primary-btn">✅ Marcar como assistido</button>
       </div>
     </div>
-  </section>
-
-  <!-- ABA: MEUS ASSISTIDOS -->
-  <section id="tab-meusassistidos" class="tab-content">
-    <h2 class="section-title">Meus Assistidos <span id="meusAssistidosCount" class="count-badge">0</span></h2>
-    <div class="list-controls">
-      <input type="text" id="filterMeusAssistidos" class="list-filter" placeholder="🔍 Filtrar por título...">
-      <select id="sortMeusAssistidos" class="list-sort">
-        <option value="recent">Mais recentes</option>
-        <option value="rating">Minha nota (maior primeiro)</option>
-        <option value="ratingsCount">Mais avaliações</option>
-        <option value="interest">Mais interesse</option>
-      </select>
-    </div>
-    <div id="myWatchedGrid" class="movie-grid"></div>
-    <p id="meusAssistidosEmpty" class="empty-msg hidden">Você ainda não avaliou nenhum filme.</p>
-    <p id="meusAssistidosFilterEmpty" class="empty-msg hidden">Nenhum filme encontrado com esse título.</p>
-  </section>
-
-  <!-- ABA: ASSISTIDOS NO SERVIDOR -->
-  <section id="tab-assistidos" class="tab-content">
-    <h2 class="section-title">Assistidos no servidor <span id="assistidosCount" class="count-badge">0</span></h2>
-    <div class="list-controls">
-      <input type="text" id="filterServidor" class="list-filter" placeholder="🔍 Filtrar por título...">
-      <select id="sortServidor" class="list-sort">
-        <option value="recent">Mais recentes</option>
-        <option value="rating">Nota (maior primeiro)</option>
-        <option value="ratingsCount">Mais avaliações</option>
-        <option value="interest">Mais interesse</option>
-      </select>
-    </div>
-    <div id="watchedGrid" class="movie-grid"></div>
-    <p id="assistidosEmpty" class="empty-msg hidden">Nenhum filme foi movido para Assistidos no servidor ainda.</p>
-    <p id="assistidosFilterEmpty" class="empty-msg hidden">Nenhum filme encontrado com esse título.</p>
-  </section>
-
-  <!-- ABA: ATIVIDADE -->
-  <section id="tab-atividade" class="tab-content">
-    <h2 class="section-title">🟢 Online agora</h2>
-    <div id="onlineNowRow" class="online-now-row"></div>
-
-    <h2 class="section-title">📝 Últimas avaliações</h2>
-    <div id="activityFeed" class="activity-feed"></div>
-    <p id="activityEmpty" class="empty-msg hidden">Nenhuma atividade ainda.</p>
   </section>
 
 </main>

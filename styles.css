@@ -333,11 +333,15 @@ button:active { transform: scale(0.97); }
   position: relative;
   display: inline-block;
   width: 1em;
+  height: 1em;
+  line-height: 1;
   vertical-align: -0.05em;
 }
 
 .half-star::before {
   content: "★";
+  position: absolute;
+  inset: 0;
   color: var(--star-off);
 }
 
@@ -346,11 +350,13 @@ button:active { transform: scale(0.97); }
   inset: 0;
   width: 50%;
   overflow: hidden;
+  color: inherit;
 }
 
 .half-star-fill::before {
   content: "★";
-  color: inherit;
+  position: absolute;
+  inset: 0;
 }
 
 .list-controls {
