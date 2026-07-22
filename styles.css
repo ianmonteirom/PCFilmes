@@ -58,6 +58,9 @@ body {
 /* ---------- Auth ---------- */
 .auth-area {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .primary-btn.small {
@@ -100,6 +103,22 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.help-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--pink-soft);
+  flex-shrink: 0;
+}
+
+.help-btn:hover {
+  border-color: var(--pink);
+  background: var(--card-hover);
 }
 
 
@@ -1065,6 +1084,41 @@ button:active { transform: scale(0.97); }
 /* ---------- Perfil de outro usuário ---------- */
 .user-profile-box {
   max-width: 460px;
+}
+
+/* ---------- Ajuda ---------- */
+.help-box {
+  max-width: 460px;
+  text-align: left;
+}
+
+.help-box h3 {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.help-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-right: 4px;
+  margin-bottom: 18px;
+}
+
+.help-section h4 {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  color: var(--pink-soft);
+}
+
+.help-section p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text);
+  line-height: 1.5;
 }
 
 .mini-grid-title {

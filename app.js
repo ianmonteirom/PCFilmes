@@ -1361,6 +1361,40 @@ const presenceCol = collection(db, "presence");
     document.getElementById("userProfileModal").classList.add("hidden");
   }
 
+  // ---------- Ajuda ----------
+  const HELP_SEEN_KEY = "pcf_helpSeen";
+
+  function openHelpModal() {
+    document.getElementById("helpModal").classList.remove("hidden");
+  }
+
+  function closeHelpModal() {
+    document.getElementById("helpModal").classList.add("hidden");
+    try {
+      localStorage.setItem(HELP_SEEN_KEY, "1");
+    } catch (err) {
+      // localStorage pode falhar em modo privado; sem problema, só não vai lembrar.
+    }
+  }
+
+  function initHelpModal() {
+    const modal = document.getElementById("helpModal");
+    document.getElementById("helpBtn").addEventListener("click", openHelpModal);
+    document.getElementById("closeHelpBtn").addEventListener("click", closeHelpModal);
+    document.getElementById("closeHelpBtnBottom").addEventListener("click", closeHelpModal);
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeHelpModal();
+    });
+
+    let alreadySeen = true;
+    try {
+      alreadySeen = localStorage.getItem(HELP_SEEN_KEY) === "1";
+    } catch (err) {
+      alreadySeen = true; // se não der pra checar, não força o popup
+    }
+    if (!alreadySeen) openHelpModal();
+  }
+
   // ---------- Firestore realtime sync ----------
   function initFirestoreSync() {
     const q = query(moviesCol, orderBy("addedAt", "asc"));
@@ -1383,6 +1417,7 @@ const presenceCol = collection(db, "presence");
     initAuth();
     initProfileModal();
     initUserProfileModal();
+    initHelpModal();
     initAddForm();
     initRoulette();
     initRatingModal();

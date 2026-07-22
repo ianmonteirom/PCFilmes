@@ -25,6 +25,7 @@
       </div>
     </div>
     <div id="authArea" class="auth-area">
+      <button id="helpBtn" class="help-btn" title="Como usar o site">?</button>
       <button id="loginBtn" class="primary-btn small">Entrar</button>
       <button id="userChip" class="user-chip hidden" title="Editar perfil">
         <img id="userAvatar" class="user-avatar" src="" alt="">
@@ -282,6 +283,59 @@
 
     <h4 class="mini-grid-title">Filmes avaliados</h4>
     <div id="userProfileGrid" class="mini-movie-grid"></div>
+  </div>
+</div>
+
+<!-- MODAL: AJUDA -->
+<div id="helpModal" class="modal hidden">
+  <div class="modal-box help-box">
+    <button id="closeHelpBtn" class="modal-close" title="Fechar">✕</button>
+    <h3>☕ Como usar o Pink's Coffee Filmes</h3>
+
+    <div class="help-sections">
+      <div class="help-section">
+        <h4>🎬 Filmes</h4>
+        <p>É o catálogo geral: todo filme que alguém buscar e adicionar aparece aqui pra todo mundo. Use a busca no topo pra encontrar no TMDb, ou adicione manualmente se não achar.</p>
+      </div>
+      <div class="help-section">
+        <h4>⭐ Avaliar</h4>
+        <p>Clique em qualquer card pra dar sua nota (de 0.5 a 5 estrelas, com meia estrela). A nota fica salva e visível pra todo mundo, com sua carinha no rodapé do card.</p>
+      </div>
+      <div class="help-section">
+        <h4>🔥 Interesse</h4>
+        <p>Marque interesse num filme pra sinalizar "eu quero ver esse". Isso faz o filme entrar na <strong>Lista do servidor</strong> e no sorteio da roleta.</p>
+      </div>
+      <div class="help-section">
+        <h4>📺 Lista do servidor</h4>
+        <p>Mostra os filmes com pelo menos 1 marca de interesse do grupo — é a lista de candidatos pra assistir juntos.</p>
+      </div>
+      <div class="help-section">
+        <h4>✅ Assistidos no servidor</h4>
+        <p>Ao avaliar um filme, marque o checkbox "Marcar como Assistido no servidor" pra indicar que o grupo já concluiu esse filme. Ele aparece aqui.</p>
+      </div>
+      <div class="help-section">
+        <h4>🍿 Meus Assistidos</h4>
+        <p>Sua lista pessoal: todo filme que você avaliou aparece aqui, com sua nota — independente de ter marcado como concluído ou não.</p>
+      </div>
+      <div class="help-section">
+        <h4>🎲 Roleta</h4>
+        <p>Sorteia um filme aleatório entre os da Lista do servidor, com uma animaçãozinha entre 3 finalistas antes de revelar o escolhido.</p>
+      </div>
+      <div class="help-section">
+        <h4>🕒 Atividade</h4>
+        <p>Veja quem está online agora e as últimas avaliações de todo mundo.</p>
+      </div>
+      <div class="help-section">
+        <h4>👤 Perfil</h4>
+        <p>Clique no seu nome no topo pra editar foto/nome. Clique no avatar de qualquer pessoa (nos cards ou na Atividade) pra ver o perfil dela.</p>
+      </div>
+      <div class="help-section">
+        <h4>🔍 Filtro e ordenação</h4>
+        <p>Toda lista tem um campo de busca por título e um seletor de ordenação (mais recentes, nota, mais avaliações, mais interesse).</p>
+      </div>
+    </div>
+
+    <button id="closeHelpBtnBottom" class="primary-btn full-width">Entendi!</button>
   </div>
 </div>
 
