@@ -7,6 +7,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
   onSnapshot,
   query,
   orderBy,
@@ -73,11 +74,12 @@ const presenceCol = collection(db, "presence");
   }
 
   function starsMarkup(rating) {
-    // rating: 0 - 5, in steps of 0.5
+    // rating: 0 - 5, em passos de 0.5. Meia estrela é um glifo real (estilo Letterboxd), não "½".
+    if (rating == null) return "—";
     const full = Math.floor(rating);
     const half = rating - full >= 0.5;
     let out = "★".repeat(full);
-    if (half) out += "½";
+    if (half) out += '<span class="half-star"><span class="half-star-fill"></span></span>';
     return out || "—";
   }
 
@@ -115,6 +117,31 @@ const presenceCol = collection(db, "presence");
     const rated = getWatchers(movie).filter((w) => w.rating != null);
     if (!rated.length) return null;
     return { avg: rated.reduce((a, w) => a + w.rating, 0) / rated.length, count: rated.length };
+  }
+
+  function interestCount(movie) {
+    const map = movie.interested || {};
+    return Object.values(map).filter(Boolean).length;
+  }
+
+  function haveIInterest(movie) {
+    return !!(currentUser && movie.interested && movie.interested[currentUser.uid]);
+  }
+
+  async function toggleInterest(movieId) {
+    if (!requireAuth()) return;
+    const movie = state.movies.find((m) => m.id === movieId);
+    if (!movie) return;
+    const uid = currentUser.uid;
+    const isInterested = !!(movie.interested && movie.interested[uid]);
+    try {
+      await updateDoc(doc(db, "movies", movieId), {
+        [`interested.${uid}`]: isInterested ? deleteField() : true,
+      });
+    } catch (err) {
+      console.error(err);
+      showToast("Não foi possível atualizar o interesse.");
+    }
   }
 
   function relativeTime(ts) {
@@ -660,6 +687,12 @@ const presenceCol = collection(db, "presence");
     if (mine && mine.moved) hint = "Toque para editar sua nota";
     else if (mine) hint = "Toque para editar sua nota (ainda em Para assistir)";
     else hint = "Toque para marcar como assistido";
+    const iInterest = haveIInterest(m);
+    const interestBtn = `
+      <button class="interest-btn${iInterest ? " active" : ""}" data-interest="${m.id}" title="${iInterest ? "Remover interesse" : "Marcar interesse (quero ver)"}">
+        🔥 <span class="interest-count">${interestCount(m)}</span>
+      </button>
+    `;
     return `
       <div class="movie-card" data-id="${m.id}" title="${hint}">
         <button class="remove-btn" data-remove="${m.id}" title="Remover">✕</button>
@@ -672,6 +705,7 @@ const presenceCol = collection(db, "presence");
           <div class="card-year">${escapeHtml(m.year || "")}</div>
           ${myStars}
           ${teamStars}
+          ${interestBtn}
         </div>
       </div>
     `;
@@ -682,6 +716,12 @@ const presenceCol = collection(db, "presence");
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         removeMovie(btn.dataset.remove);
+      });
+    });
+    grid.querySelectorAll("[data-interest]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleInterest(btn.dataset.interest);
       });
     });
     grid.querySelectorAll(".watched-avatar-wrap").forEach((wrap) => {
@@ -720,34 +760,115 @@ const presenceCol = collection(db, "presence");
     document.getElementById("avatarTooltip").classList.add("hidden");
   }
 
+  // ---------- Filtro e ordenação de listas ----------
+  let listState = {
+    lista: { q: "", sort: "recent" },
+    meus: { q: "", sort: "recent" },
+    servidor: { q: "", sort: "recent" },
+  };
+
+  function filterByTitle(list, q) {
+    if (!q) return list;
+    const needle = q.toLowerCase();
+    return list.filter((m) => (m.title || "").toLowerCase().includes(needle));
+  }
+
+  // sortKey: "recent" (mantém a ordem que já veio), "rating", "ratingsCount", "interest".
+  // personal=true usa a MINHA nota (Meus Assistidos); personal=false usa a média do grupo.
+  function sortMovies(list, sortKey, personal) {
+    if (sortKey === "recent") return list;
+    const arr = list.slice();
+    if (sortKey === "rating") {
+      arr.sort((a, b) => {
+        const av = personal ? (getMyEntry(a) && getMyEntry(a).rating) : teamAverage(a) && teamAverage(a).avg;
+        const bv = personal ? (getMyEntry(b) && getMyEntry(b).rating) : teamAverage(b) && teamAverage(b).avg;
+        return (bv ?? -1) - (av ?? -1);
+      });
+    } else if (sortKey === "ratingsCount") {
+      arr.sort(
+        (a, b) =>
+          getWatchers(b).filter((w) => w.rating != null).length - getWatchers(a).filter((w) => w.rating != null).length
+      );
+    } else if (sortKey === "interest") {
+      arr.sort((a, b) => interestCount(b) - interestCount(a));
+    }
+    return arr;
+  }
+
+  function initListFilters() {
+    [
+      ["filterLista", "sortLista", "lista", () => renderWatchlist()],
+      ["filterMeusAssistidos", "sortMeusAssistidos", "meus", () => renderMyWatched()],
+      ["filterServidor", "sortServidor", "servidor", () => renderWatched()],
+    ].forEach(([filterId, sortId, key, renderFn]) => {
+      const filterEl = document.getElementById(filterId);
+      const sortEl = document.getElementById(sortId);
+      if (filterEl) {
+        filterEl.addEventListener("input", () => {
+          listState[key].q = filterEl.value.trim();
+          renderFn();
+        });
+      }
+      if (sortEl) {
+        sortEl.addEventListener("change", () => {
+          listState[key].sort = sortEl.value;
+          renderFn();
+        });
+      }
+    });
+  }
+
   function renderWatchlist() {
-    const list = currentUser
-      ? state.movies.filter((m) => !haveIMoved(m))
-      : state.movies.slice();
+    const raw = currentUser ? state.movies.filter((m) => !haveIMoved(m)) : state.movies.slice();
+    const filtered = filterByTitle(raw, listState.lista.q);
+    const list = sortMovies(filtered, listState.lista.sort, false);
     const grid = document.getElementById("watchlist");
     const empty = document.getElementById("listaEmpty");
+    const filterEmpty = document.getElementById("listaFilterEmpty");
     document.getElementById("listaCount").textContent = list.length;
     grid.innerHTML = list.map((m) => movieCardHtml(m)).join("");
-    empty.classList.toggle("hidden", list.length !== 0);
+    empty.classList.toggle("hidden", raw.length !== 0);
+    filterEmpty.classList.toggle("hidden", !(raw.length !== 0 && list.length === 0));
     attachCardHandlers(grid);
   }
 
-  function renderWatched() {
-    const list = currentUser
-      ? state.movies.filter((m) => haveIMoved(m))
-      : state.movies.filter((m) => anyMoved(m));
-    list.sort((a, b) => {
+  // Lista pessoal: filmes que EU avaliei (independente de terem sido movidos para o servidor).
+  function renderMyWatched() {
+    const raw = currentUser ? state.movies.filter((m) => haveIRated(m)) : [];
+    raw.sort((a, b) => {
       const aw = currentUser && a.watchedBy && a.watchedBy[currentUser.uid];
       const bw = currentUser && b.watchedBy && b.watchedBy[currentUser.uid];
-      const at = aw ? aw.watchedAt : Math.max(0, ...getWatchers(a).map((w) => w.watchedAt || 0));
-      const bt = bw ? bw.watchedAt : Math.max(0, ...getWatchers(b).map((w) => w.watchedAt || 0));
+      return ((bw && bw.watchedAt) || 0) - ((aw && aw.watchedAt) || 0);
+    });
+    const filtered = filterByTitle(raw, listState.meus.q);
+    const list = sortMovies(filtered, listState.meus.sort, true);
+    const grid = document.getElementById("myWatchedGrid");
+    const empty = document.getElementById("meusAssistidosEmpty");
+    const filterEmpty = document.getElementById("meusAssistidosFilterEmpty");
+    document.getElementById("meusAssistidosCount").textContent = list.length;
+    grid.innerHTML = list.map((m) => movieCardHtml(m)).join("");
+    empty.classList.toggle("hidden", raw.length !== 0);
+    filterEmpty.classList.toggle("hidden", !(raw.length !== 0 && list.length === 0));
+    attachCardHandlers(grid);
+  }
+
+  // Lista do servidor: TODOS os filmes que qualquer pessoa do grupo já moveu (compartilhada).
+  function renderWatched() {
+    const raw = state.movies.filter((m) => anyMoved(m));
+    raw.sort((a, b) => {
+      const at = Math.max(0, ...getWatchers(a).filter((w) => w.moved).map((w) => w.watchedAt || 0));
+      const bt = Math.max(0, ...getWatchers(b).filter((w) => w.moved).map((w) => w.watchedAt || 0));
       return (bt || 0) - (at || 0);
     });
+    const filtered = filterByTitle(raw, listState.servidor.q);
+    const list = sortMovies(filtered, listState.servidor.sort, false);
     const grid = document.getElementById("watchedGrid");
     const empty = document.getElementById("assistidosEmpty");
+    const filterEmpty = document.getElementById("assistidosFilterEmpty");
     document.getElementById("assistidosCount").textContent = list.length;
     grid.innerHTML = list.map((m) => movieCardHtml(m)).join("");
-    empty.classList.toggle("hidden", list.length !== 0);
+    empty.classList.toggle("hidden", raw.length !== 0);
+    filterEmpty.classList.toggle("hidden", !(raw.length !== 0 && list.length === 0));
     attachCardHandlers(grid);
   }
 
@@ -755,9 +876,7 @@ const presenceCol = collection(db, "presence");
     const toWatchCount = currentUser
       ? state.movies.filter((m) => !haveIMoved(m)).length
       : state.movies.length;
-    const watchedCount = currentUser
-      ? state.movies.filter((m) => haveIMoved(m)).length
-      : state.movies.filter((m) => anyMoved(m)).length;
+    const watchedCount = state.movies.filter((m) => anyMoved(m)).length;
     const heroToWatch = document.getElementById("heroToWatch");
     const heroWatched = document.getElementById("heroWatched");
     if (heroToWatch) heroToWatch.textContent = `${toWatchCount} para assistir`;
@@ -766,6 +885,7 @@ const presenceCol = collection(db, "presence");
 
   function renderAll() {
     renderWatchlist();
+    renderMyWatched();
     renderWatched();
     renderHeroStats();
     updateRouletteAvailability();
@@ -1194,6 +1314,7 @@ const presenceCol = collection(db, "presence");
     initAddForm();
     initRoulette();
     initRatingModal();
+    initListFilters();
     resetRouletteView();
     initFirestoreSync();
     initPresence();

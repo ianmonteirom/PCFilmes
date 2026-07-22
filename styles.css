@@ -328,6 +328,81 @@ button:active { transform: scale(0.97); }
   padding: 16px 0;
 }
 
+/* Meia-estrela real (estilo Letterboxd), usada em qualquer texto de avaliação */
+.half-star {
+  position: relative;
+  display: inline-block;
+  width: 1em;
+  vertical-align: -0.05em;
+}
+
+.half-star::before {
+  content: "★";
+  color: var(--star-off);
+}
+
+.half-star-fill {
+  position: absolute;
+  inset: 0;
+  width: 50%;
+  overflow: hidden;
+}
+
+.half-star-fill::before {
+  content: "★";
+  color: inherit;
+}
+
+.list-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.list-filter {
+  margin: 0;
+  flex: 1;
+  min-width: 180px;
+  max-width: 320px;
+}
+
+.list-sort {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.list-sort:hover { border-color: var(--pink); color: var(--pink-soft); }
+
+.interest-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--card-hover);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-top: 6px;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.interest-btn:hover { border-color: var(--pink); color: var(--pink-soft); }
+
+.interest-btn.active {
+  background: linear-gradient(135deg, var(--pink), var(--pink-deep));
+  border-color: transparent;
+  color: #fff;
+}
+
 /* ---------- Movie cards ---------- */
 .movie-grid {
   display: grid;
