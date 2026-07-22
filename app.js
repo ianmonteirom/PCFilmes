@@ -465,13 +465,12 @@ const presenceCol = collection(db, "presence");
     document.getElementById("profilePhotoPreview").src = avatarUrl(myDisplayName(), myPhotoURL());
     document.getElementById("profileNameInput").value = myDisplayName();
 
-    const watchedMovies = state.movies.filter((m) => haveIMoved(m));
     const ratedMovies = state.movies.filter((m) => haveIRated(m));
     const ratings = ratedMovies
       .map((m) => m.watchedBy[currentUser.uid].rating)
       .filter((r) => r != null);
     const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
-    document.getElementById("profileStatWatched").textContent = watchedMovies.length;
+    document.getElementById("profileStatWatched").textContent = ratedMovies.length;
     document.getElementById("profileStatAvg").textContent = avg != null ? avg.toFixed(1) : "—";
 
     document.getElementById("profileModal").classList.remove("hidden");
@@ -486,26 +485,45 @@ const presenceCol = collection(db, "presence");
     const form = document.getElementById("addForm");
     const input = document.getElementById("movieInput");
     const resultsBox = document.getElementById("searchResults");
+    let searchTimer = null;
+    let searchSeq = 0;
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const query = input.value.trim();
-      if (!query) return;
-      if (!requireAuth()) return;
-
+    async function runSearch(query) {
+      const seq = ++searchSeq;
       resultsBox.innerHTML = '<p class="hint" style="padding:10px;">Buscando...</p>';
       resultsBox.classList.remove("hidden");
-
       try {
         const results = await searchMovies(query);
+        if (seq !== searchSeq) return; // resposta desatualizada (usuário já digitou outra coisa)
         renderSearchResults(results);
       } catch (err) {
+        if (seq !== searchSeq) return;
         console.error(err);
         resultsBox.innerHTML = `<p class="hint" style="padding:10px;">Erro ao buscar (${escapeHtml(err.message)}). Você pode adicionar manualmente.</p>
           <div class="search-result-item" id="manualAddFallback"><div class="sr-info"><span class="sr-title">Adicionar "${escapeHtml(query)}" manualmente</span></div></div>`;
         const fb = document.getElementById("manualAddFallback");
         if (fb) fb.addEventListener("click", () => { addManualMovie(query); input.value = ""; resultsBox.classList.add("hidden"); });
       }
+    }
+
+    input.addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      const query = input.value.trim();
+      if (query.length < 2) {
+        searchSeq++; // invalida buscas pendentes
+        resultsBox.classList.add("hidden");
+        resultsBox.innerHTML = "";
+        return;
+      }
+      searchTimer = setTimeout(() => runSearch(query), 350);
+    });
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      clearTimeout(searchTimer);
+      const query = input.value.trim();
+      if (!query) return;
+      runSearch(query);
     });
 
     function renderSearchResults(results) {
@@ -1123,11 +1141,10 @@ const presenceCol = collection(db, "presence");
     const ratedMovies = state.movies.filter((m) => m.watchedBy && m.watchedBy[uid] && m.watchedBy[uid].rating != null);
     const ratings = ratedMovies.map((m) => m.watchedBy[uid].rating);
     const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
-    const movedCount = ratedMovies.filter((m) => m.watchedBy[uid].moved).length;
 
     document.getElementById("userProfilePhoto").src = avatarUrl(displayName, photoURL);
     document.getElementById("userProfileName").textContent = displayName;
-    document.getElementById("userProfileStatWatched").textContent = movedCount;
+    document.getElementById("userProfileStatWatched").textContent = ratedMovies.length;
     document.getElementById("userProfileStatAvg").textContent = avg != null ? avg.toFixed(1) : "—";
 
     ratedMovies.sort((a, b) => (b.watchedBy[uid].rating || 0) - (a.watchedBy[uid].rating || 0));
