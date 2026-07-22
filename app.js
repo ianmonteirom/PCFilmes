@@ -664,11 +664,13 @@ const presenceCol = collection(db, "presence");
   function watchedByRowHtml(movie) {
     const watchers = getWatchers(movie);
     if (!watchers.length) return "";
+    // Guarda só a nota numérica (não o HTML da estrela) no atributo — embutir HTML com
+    // aspas dentro de outro atributo HTML quebra o parsing e corta os elementos seguintes.
     const buildAvatar = (w) => {
       const src = avatarUrl(w.displayName, w.photoURL);
-      const stars = w.rating != null ? starsMarkup(w.rating) : "—";
+      const ratingAttr = w.rating != null ? w.rating : "";
       return `
-        <div class="watched-avatar-wrap" data-uid="${w.uid}" data-name="${escapeHtml(w.displayName || "Alguém")}" data-stars="${escapeHtml(stars)}">
+        <div class="watched-avatar-wrap" data-uid="${w.uid}" data-name="${escapeHtml(w.displayName || "Alguém")}" data-rating="${ratingAttr}">
           <img class="watched-avatar" src="${src}" alt="${escapeHtml(w.displayName || "")}">
         </div>
       `;
@@ -772,7 +774,9 @@ const presenceCol = collection(db, "presence");
   // ---------- Tooltip global (evita corte nas bordas do card) ----------
   function showAvatarTooltip(el) {
     const tooltip = document.getElementById("avatarTooltip");
-    tooltip.innerHTML = `${escapeHtml(el.dataset.name || "Alguém")} — <span class="tt-stars">${el.dataset.stars || "—"}</span>`;
+    const ratingAttr = el.dataset.rating;
+    const rating = ratingAttr === "" || ratingAttr == null ? null : Number(ratingAttr);
+    tooltip.innerHTML = `${escapeHtml(el.dataset.name || "Alguém")} — <span class="tt-stars">${starsMarkup(rating)}</span>`;
     tooltip.classList.remove("hidden");
     const rect = el.getBoundingClientRect();
     const tRect = tooltip.getBoundingClientRect();
